@@ -9,7 +9,15 @@
 #ifndef _OSARA_H
 #define _OSARA_H
 
-#include <windows.h>
+#ifdef _WIN32
+# include <windows.h>
+#else
+// Disable warnings for SWELL, since we don't have any control over those.
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Weverything"
+# include <windows.h>
+# pragma clang diagnostic pop
+#endif
 #include <string>
 #include <sstream>
 
@@ -45,6 +53,7 @@
 #define REAPERAPI_WANT_Main_OnCommand
 #define REAPERAPI_WANT_Undo_CanUndo2
 #define REAPERAPI_WANT_Undo_CanRedo2
+#define REAPERAPI_WANT_parse_timestr_len
 #define REAPERAPI_WANT_parse_timestr_pos
 #define REAPERAPI_WANT_GetMasterTrackVisibility
 #define REAPERAPI_WANT_SetMasterTrackVisibility
@@ -134,8 +143,11 @@
 #define REAPERAPI_WANT_GetMediaTrackInfo_Value
 #define REAPERAPI_WANT_GetTrackMIDINoteName
 #define REAPERAPI_WANT_get_config_var
+#define REAPERAPI_WANT_projectconfig_var_addr
+#define REAPERAPI_WANT_projectconfig_var_getoffs
 #define REAPERAPI_WANT_EnumProjects
 #define REAPERAPI_WANT_GetProjectName
+#define REAPERAPI_WANT_GetProjectTimeOffset
 #define REAPERAPI_WANT_plugin_register
 #define REAPERAPI_WANT_GetTrackUIVolPan
 #define REAPERAPI_WANT_GetGlobalAutomationOverride
@@ -166,10 +178,25 @@
 #define REAPERAPI_WANT_GetNumTakeMarkers
 #define REAPERAPI_WANT_GetTakeMarker
 #define REAPERAPI_WANT_GetTrackStateChunk
+#define REAPERAPI_WANT_GetToggleCommandState2
+#define REAPERAPI_WANT_SectionFromUniqueID
+#define REAPERAPI_WANT_GetFocusedFX
+#define REAPERAPI_WANT_GetTake
+#define REAPERAPI_WANT_GetTrackUIMute
+#define REAPERAPI_WANT_GetResourcePath
+#define REAPERAPI_WANT_get_ini_file
+#define REAPERAPI_WANT_TrackFX_AddByName
+#define REAPERAPI_WANT_TrackFX_Delete
+#define REAPERAPI_WANT_GetSetTrackGroupMembership
+#define REAPERAPI_WANT_GetSetTrackGroupMembershipHigh
+#define REAPERAPI_WANT_GetSetProjectInfo_String
 #include <reaper/reaper_plugin.h>
 #include <reaper/reaper_plugin_functions.h>
 
 const char CONFIG_SECTION[] = "osara";
+
+const int MAIN_SECTION = 0;
+const int MIDI_EVENT_LIST_SECTION = 32061;
 
 // Needed for REAPER API functions which take a bool as an input pointer.
 static bool bFalse = false;
@@ -222,8 +249,9 @@ typedef enum {
 	TF_SAMPLE
 } TimeFormat;
 const TimeFormat TF_RULER = TF_NONE;
-std::string formatTime(double time, TimeFormat format=TF_RULER, bool isLength=false, bool useCache=true, bool includeZeros=true);
+std::string formatTime(double time, TimeFormat format=TF_RULER, bool isLength=false, bool useCache=true, bool includeZeros=true, bool includeProjectStartOffset=true);
 void resetTimeCache(TimeFormat excludeFormat=TF_NONE);
+std::string formatNoteLength(double start, double end);
 std::string formatCursorPosition(TimeFormat format=TF_RULER, bool useCache=true);
 
 bool isTrackSelected(MediaTrack* track);
@@ -251,6 +279,8 @@ bool sendUiaNotification(const std::string& message, bool interrupt = true);
 #define ComboBox_ResetContent(hwnd) (int)SendMessage(hwnd, CB_RESETCONTENT, 0, 0)
 #endif
 
+bool isClassName(HWND hwnd, std::string className);
+
 extern bool isHandlingCommand;
 void reportTransportState(int state);
 void reportRepeat(bool repeat);
@@ -261,5 +291,8 @@ IReaperControlSurface* createSurface();
 extern bool selectedEnvelopeIsTake;
 // exports.cpp
 void registerExports(reaper_plugin_info_t* rec);
+// translation.cpp
+void initTranslation();
+void translateDialog(HWND dialog);
 
 #endif

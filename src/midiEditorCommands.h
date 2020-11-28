@@ -8,6 +8,12 @@
 
 #include "osara.h"
 
+const int MIDI_EDITOR_SECTION = 32060;
+
+// This should be called when playback starts, as otherwise, pending note off
+// messages for OSARA MIDI preview might interfere with MIDI playback.
+void cancelMidiPreviewNotesOff();
+
 void cmdMidiMoveCursor(Command* command);
 void cmdMidiToggleSelection(Command* command);
 void cmdMidiMoveToNextChord(Command* command);
@@ -22,6 +28,7 @@ void postMidiMovePitchCursor(int command);
 void cmdMidiInsertNote(Command* command);
 void cmdMidiDeleteEvents(Command* command);
 void postMidiSelectNotes(int command);
+void postMidiSelectEvents(int command);
 void cmdMidiMoveToNextCC(Command* command);
 void cmdMidiMoveToPreviousCC(Command* command);
 void cmdMidiMoveToNextCCKeepSel(Command* command);
@@ -34,9 +41,11 @@ void cmdMidiMoveEventRightPixelFocus(Command* command);
 void cmdMidiMoveEventLeftGridFocus(Command* command);
 void cmdMidiMoveEventRightGridFocus(Command* command);
 void cmdMidiSelectSamePitchStartingInTimeSelection(Command* command) ;
+void cmdMidiNoteSplitOrJoin(Command* command);
 #ifdef _WIN32
 void cmdFocusNearestMidiEvent(Command* command);
 void cmdMidiFilterWindow(Command* command);
+void maybePreviewCurrentNoteInEventList(HWND hwnd);
 #endif
 
 void postMidiChangeVelocity(int command);
@@ -46,3 +55,5 @@ void postMidiMoveStart(int command);
 void postMidiChangeCCValue(int command);
 void postMidiMoveCC(int command);
 void postMidiSwitchCCLane(int command);
+void postToggleMidiInputsAsStepInput(int command);
+void postToggleFunctionKeysAsStepInput(int command);

@@ -6,28 +6,32 @@
  * License: GNU General Public License version 2.0
  */
 
-#include <windows.h>
 #include <string>
 #include <sstream>
 #include <vector>
 #include <algorithm>
 #include <map>
+#include "midiEditorCommands.h"
 #include "osara.h"
+#include "translation.h"
 #ifdef _WIN32
 #include <Commctrl.h>
 #endif
 
 using namespace std;
 
+// Note: while the below struct is called MidiControlChange in line with naming in Reaper,
+// It is also used for other MIDI messages.
 typedef struct {
 	int channel;
 	int index;
-	int control;
-	int value;
+	int message1;
+	int message2;
+	int message3;
 	double position;
 } MidiControlChange;
 
-const double DEFAULT_PREVIEW_LENGTH = 0.3;
+const UINT DEFAULT_PREVIEW_LENGTH = 300; // ms
 
 struct MidiNote {
 	int channel;
@@ -36,10 +40,12 @@ struct MidiNote {
 	int index;
 	double start;
 	double end;
+
 	double getLength() const {
 		return max (0, (end - start));
 	}
 };
+
 vector<MidiNote> previewingNotes; // Notes currently being previewed.
 UINT_PTR previewDoneTimer = 0;
 const int MIDI_NOTE_ON = 0x90;
@@ -155,6 +161,7 @@ void CALLBACK previewDone(HWND hwnd, UINT msg, UINT_PTR event, DWORD time) {
 	previewReg.curpos = 0.0;
 	PlayTrackPreview(&previewReg);
 	previewDoneTimer = 0;
+	KillTimer(nullptr, event);
 }
 
 // Used to find out the minimum note length.
@@ -163,6 +170,9 @@ bool compareNotesByLength(const MidiNote& note1, const MidiNote& note2) {
 }
 
 void previewNotes(MediaItem_Take* take, const vector<MidiNote>& notes) {
+	if (!GetToggleCommandState2(SectionFromUniqueID(MIDI_EDITOR_SECTION), 40041)) {  // Options: Preview notes when inserting or editing
+		return;
+	}
 	if (!previewReg.src) {
 		// Initialise preview.
 #ifdef _WIN32
@@ -198,7 +208,14 @@ void previewNotes(MediaItem_Take* take, const vector<MidiNote>& notes) {
 	double minLength = min_element(notes.begin(), notes.end(), compareNotesByLength)->getLength();
 	// Schedule note off messages.
 	previewDoneTimer = SetTimer(nullptr, 0,
-		(UINT)max(DEFAULT_PREVIEW_LENGTH, (minLength * 1000)), previewDone);
+		(UINT)(minLength ? minLength * 1000 : DEFAULT_PREVIEW_LENGTH), previewDone);
+}
+
+void cancelMidiPreviewNotesOff() {
+	if (previewDoneTimer) {
+		KillTimer(nullptr, previewDoneTimer);
+		previewDoneTimer = 0;
+	}
 }
 
 void cmdMidiMoveCursor(Command* command) {
@@ -207,29 +224,60 @@ void cmdMidiMoveCursor(Command* command) {
 	ostringstream s;
 	s << formatCursorPosition(TF_MEASURE);
 	MediaItem_Take* take = MIDIEditor_GetTake(editor);
-	int notes;
-	MIDI_CountEvts(take, &notes, NULL, NULL);
+	int noteCount;
+	MIDI_CountEvts(take, &noteCount, NULL, NULL);
 	double now = GetCursorPosition();
-	int count = 0;
 	// todo: Optimise; perhaps a binary search?
-	for (int n = 0; n < notes; ++n) {
-		double start;
-		MIDI_GetNote(take, n, NULL, NULL, &start, NULL, NULL, NULL, NULL);
+	vector<MidiNote> notes;
+	for (int n = 0; n < noteCount; ++n) {
+		double start, end;
+		int chan, pitch, vel;
+		MIDI_GetNote(take, n, NULL, NULL, &start, &end, &chan, &pitch, &vel);
 		start = MIDI_GetProjTimeFromPPQPos(take, start);
-		if (start > now)
+		if (start > now) {
 			break;
-		if (start == now)
-			++count;
+		}
+		if (start == now) {
+			end = MIDI_GetProjTimeFromPPQPos(take, end);
+			notes.push_back({chan, pitch, vel, 0, start, end});
+		}
 	}
-	if (count > 0)
+	auto count = notes.size();
+	if (count > 0) {
+		previewNotes(take, notes);
 		fakeFocus = FOCUS_NOTE;
 		s << " " << count << (count == 1 ? " note" : " notes");
-		outputMessage(s);
+	}
+	outputMessage(s);
 }
 
 const string getMidiNoteName(MediaItem_Take *take, int pitch, int channel) {
-	static const char* names[] = {"c", "c sharp", "d", "d sharp", "e", "f",
-		"f sharp", "g", "g sharp", "a", "a sharp", "b"};
+	static const char* names[] = {
+		// Translators: The name of a musical note.
+		translate("c"),
+		// Translators: The name of a musical note.
+		translate("c sharp"),
+		// Translators: The name of a musical note.
+		translate("d"),
+		// Translators: The name of a musical note.
+		translate("d sharp"),
+		// Translators: The name of a musical note.
+		translate("e"),
+		// Translators: The name of a musical note.
+		translate("f"),
+		// Translators: The name of a musical note.
+		translate("f sharp"),
+		// Translators: The name of a musical note.
+		translate("g"),
+		// Translators: The name of a musical note.
+		translate("g sharp"),
+		// Translators: The name of a musical note.
+		translate("a"),
+		// Translators: The name of a musical note.
+		translate("a sharp"),
+		// Translators: The name of a musical note.
+		translate("b")
+	};
 	MediaTrack* track = GetMediaItemTake_Track(take);
 	int tracknumber = static_cast<int> (GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER")); // one based
 	const char* noteName = GetTrackMIDINoteName(tracknumber - 1, pitch, channel); // track number is zero based
@@ -355,6 +403,19 @@ bool isNoteSelected(MediaItem_Take* take, const int note) {
 	return sel;
 }
 
+int countSelectedNotes(MediaItem_Take* take, int offset=-1) {
+	int noteIndex = offset;
+	int count = 0;
+	for(;;){
+		noteIndex = MIDI_EnumSelNotes(take, noteIndex);
+		if (noteIndex == -1) {
+			break;
+		}
+		++count;
+	}
+	return count;
+}
+
 vector<MidiNote> getSelectedNotes(MediaItem_Take* take, int offset=-1) {
 	int noteIndex = offset;
 	vector<MidiNote> notes;
@@ -399,9 +460,9 @@ MidiControlChange findCC(MediaItem_Take* take, int direction) {
 	}
 	int movement = direction == 0 ? 1 : direction;
 	bool found = false;
-	int chan, control, value;
+	int chan, msg1, msg2, msg3;
 	for (; 0 <= start && start < count; start += movement) {
-		MIDI_GetCC(take, start, NULL, NULL, &position, NULL, &chan, &control, &value);
+		MIDI_GetCC(take, start, NULL, NULL, &position, &msg1, &chan, &msg2, &msg3);
 		position = MIDI_GetProjTimeFromPPQPos(take, position);
 		if (movement == -1 ? position <= cursor : position >= cursor) {
 			currentCC = start;
@@ -412,7 +473,7 @@ MidiControlChange findCC(MediaItem_Take* take, int direction) {
 	if (!found) {
 		return {-1};
 	}
-	return {chan, currentCC, control, value, position};
+	return {chan, currentCC, msg1, msg2, msg3, position};
 }
 
 void selectCC(MediaItem_Take* take, const int cc, bool select=true) {
@@ -434,10 +495,10 @@ vector<MidiControlChange> getSelectedCCs(MediaItem_Take* take, int offset=-1) {
 			break;
 		}
 		double position;
-		int chan, control, value;
-		MIDI_GetCC(take, ccIndex, NULL, NULL, &position, NULL, &chan, &control, &value);
+		int chan, msg1, msg2, msg3;
+		MIDI_GetCC(take, ccIndex, NULL, NULL, &position, &msg1, &chan, &msg2, &msg3);
 		position = MIDI_GetProjTimeFromPPQPos(take, position);
-		ccs.push_back({chan, ccIndex, control, value, position});
+		ccs.push_back({chan, ccIndex, msg1, msg2, msg3, position});
 	}
 	return ccs;
 }
@@ -445,7 +506,7 @@ vector<MidiControlChange> getSelectedCCs(MediaItem_Take* take, int offset=-1) {
 void cmdMidiToggleSelection(Command* command) {
 	if (isSelectionContiguous) {
 		isSelectionContiguous = false;
-		outputMessage("noncontiguous selection");
+		outputMessage(translate("noncontiguous selection"));
 		return;
 	}
 	HWND editor = MIDIEditor_GetActive();
@@ -485,7 +546,7 @@ void cmdMidiToggleSelection(Command* command) {
 		default:
 			return;
 	}
-	outputMessage(select ? "selected" : "unselected");
+	outputMessage(select ? translate("selected") : translate("unselected"));
 }
 
 void moveToChord(int direction, bool clearSelection=true, bool select=true) {
@@ -520,8 +581,9 @@ void moveToChord(int direction, bool clearSelection=true, bool select=true) {
 	fakeFocus = FOCUS_NOTE;
 	ostringstream s;
 	s << formatCursorPosition(TF_MEASURE) << " ";
-	if (!select && !isNoteSelected(take, chord.first))
-		s << "unselected" << " ";
+	if (!select && !isNoteSelected(take, chord.first)) {
+		s << translate("unselected") << " ";
+	}
 	if (shouldReportNotes) {
 		int count = chord.second - chord.first + 1;
 		s << count << (count == 1 ? " note" : " notes");
@@ -555,8 +617,9 @@ void moveToNoteInChord(int direction, bool clearSelection=true, bool select=true
 		MIDIEditor_OnCommand(editor, 40214); // Edit: Unselect all
 		isSelectionContiguous = true;
 	}
-	if (select)
+	if (select) {
 		selectNote(take, note.index);
+	}
 	previewNotes(take, {note});
 	fakeFocus = FOCUS_NOTE;
 	ostringstream s;
@@ -564,12 +627,12 @@ void moveToNoteInChord(int direction, bool clearSelection=true, bool select=true
 		s << getMidiNoteName(take, note.pitch, note.channel);
 	}
 	if (!select && !isNoteSelected(take, note.index)) {
-		s << " unselected ";
+		s << " " << translate("unselected") << " ";
 	} else if (shouldReportNotes) {
 		s << ", ";
 	}
 	if (shouldReportNotes) {
-		s << formatTime(note.getLength(), TF_MEASURE, true, false, false);
+		s << formatNoteLength(note.start, note.end);
 	}
 	outputMessage(s);
 }
@@ -605,25 +668,33 @@ void postMidiMovePitchCursor(int command) {
 void cmdMidiInsertNote(Command* command) {
 	HWND editor = MIDIEditor_GetActive();
 	MediaItem_Take* take = MIDIEditor_GetTake(editor);
-	int oldCount = MIDI_CountEvts(take, NULL, NULL, NULL);
+	int oldCount;
+	MIDI_CountEvts(take, &oldCount, nullptr, nullptr);
 	MIDIEditor_OnCommand(editor, command->gaccel.accel.cmd);
-	if (MIDI_CountEvts(take, NULL, NULL, NULL) <= oldCount)
+	int newCount;
+	MIDI_CountEvts(take, &newCount, nullptr, nullptr);
+	if (newCount <= oldCount) {
 		return; // Not inserted.
+	}
 	int pitch = MIDIEditor_GetSetting_int(editor, "active_note_row");
 	// Get selected notes.
 	vector<MidiNote> selectedNotes = getSelectedNotes(take);
 	// Find the just inserted note based on its pitch, as that makes it unique.
-	auto note = *(find_if(
+	auto it = find_if(
 		selectedNotes.begin(), selectedNotes.end(),
 		[pitch](MidiNote n) { return n.pitch == pitch; }
-	));
-	// Play the inserted note.
+	);
+	if (it == selectedNotes.end()) {
+		return;
+	}
+	auto& note = *it;
+	// Play the inserted note when preview is enabled.
 	previewNotes(take, {note});
 	fakeFocus = FOCUS_NOTE;
 	ostringstream s;
 	if (shouldReportNotes) {
 		s << getMidiNoteName(take, note.pitch, note.channel) << " ";
-		s << formatTime(note.getLength(), TF_MEASURE, true, false, false);
+		s << formatNoteLength(note.start, note.end);
 		s << ", ";
 	}
 	s << formatCursorPosition(TF_MEASURE);
@@ -656,6 +727,28 @@ void postMidiSelectNotes(int command) {
 	ostringstream s;
 	s << count << " note" << ((count == 1) ? "" : "s") << " selected";
 	outputMessage(s);
+}
+
+void postMidiSelectEvents(int command) {
+	HWND editor = MIDIEditor_GetActive();
+	MediaItem_Take* take = MIDIEditor_GetTake(editor);
+	int evtIndex=-1;
+	int count=0;
+	for(;;){
+		evtIndex = MIDI_EnumSelEvts(take, evtIndex);
+		if (evtIndex == -1) {
+			break;
+		}
+		++count;
+	}
+	if (fakeFocus != FOCUS_NOTE && fakeFocus != FOCUS_CC) {
+		fakeFocus = FOCUS_NOTE;
+	}
+	// Translators: Reported when selecting events in the MIDI editor. {} will be replaced with
+	// the number of events; e.g. "2 events selected".
+	outputMessage(format(
+		translate_plural("{} event selected", "{} events selected", count),
+		count));
 }
 
 const string getMidiControlName(MediaItem_Take *take, int control, int channel) {
@@ -730,8 +823,8 @@ const string getMidiControlName(MediaItem_Take *take, int control, int channel) 
 	};
 	MediaTrack* track = GetMediaItemTake_Track(take);
 	int tracknumber = static_cast<int> (GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER")); // one based
-	const char* controlName = GetTrackMIDINoteName(tracknumber - 1, 128 + control, channel); // track number is zero based, controls start at 128
 	ostringstream s;
+	const char* controlName = GetTrackMIDINoteName(tracknumber - 1, 128 + control, channel); // track number is zero based, controls start at 128
 	s << control;
 	if (controlName) {
 		s << " (" << controlName << ")";
@@ -744,13 +837,13 @@ const string getMidiControlName(MediaItem_Take *take, int control, int channel) 
 	return s.str();
 }
 
-// We cache the last reported control so we can report just the components which have changed.
-int oldControl = -1;
-
-void moveToCC(int direction, bool clearSelection=true, bool select=true, bool useCache=true) {
+void moveToCC(int direction, bool clearSelection=true, bool select=true) {
 	HWND editor = MIDIEditor_GetActive();
 	MediaItem_Take* take = MIDIEditor_GetTake(editor);
 	auto cc = findCC(take, direction);
+	if (cc.channel == -1) {
+		return;
+	}
 	if (clearSelection || select) {
 		Undo_BeginBlock();
 	}
@@ -768,11 +861,23 @@ void moveToCC(int direction, bool clearSelection=true, bool select=true, bool us
 	fakeFocus = FOCUS_CC;
 	ostringstream s;
 	s << formatCursorPosition(TF_MEASURE) << " ";
-	if (!useCache || cc.control != oldControl) {
-		s << getMidiControlName(take, cc.control, cc.channel) << ", ";
-		oldControl = cc.control;
+	if (cc.message1 == 0xA0) {
+		s << "Poly Aftertouch ";
+		// Note: separate the note and value with two spaces to avoid treatment as thousands separator.
+		s << getMidiNoteName(take, cc.message2, cc.channel) << "  ";
+		s << cc.message3;
+	} else if (cc.message1 == 0xB0) {
+		s << "Control ";
+		s << getMidiControlName(take, cc.message2, cc.channel) << ", ";
+		s << cc.message3;
+	} else if (cc.message1 == 0xC0) {
+		s << "Program " << cc.message2;
+	} else if (cc.message1 == 0xD0) {
+		s << "Channel pressure " << cc.message2;
+	} else if (cc.message1 == 0xE0) {
+		auto pitchBendValue = (cc.message3 << 7) | cc.message2;
+		s << "Pitchhhh Bend " << pitchBendValue;
 	}
-	s << cc.value;
 	if (!select && !isCCSelected(take, cc.index)) {
 		s << "unselected" << " ";
 	}
@@ -836,7 +941,7 @@ void cmdMidiMoveToPrevItem(Command* command) {
 void cmdMidiMoveToTrack(Command* command) {
 	HWND editor = MIDIEditor_GetActive();
 	MIDIEditor_OnCommand(editor, command->gaccel.accel.cmd);
-		MediaItem_Take* take = MIDIEditor_GetTake(editor);
+	MediaItem_Take* take = MIDIEditor_GetTake(editor);
 	MediaItem* item = GetMediaItemTake_Item(take);
 	MediaTrack* track = GetMediaItem_Track(item);
 	int count = CountTrackMediaItems(track);
@@ -861,6 +966,7 @@ void cmdMidiMoveToTrack(Command* command) {
 
 void cmdMidiMoveEventLeftPixelFocus(Command* command) {
 	HWND editor = MIDIEditor_GetActive();
+	isHandlingCommand = false;
 	switch (fakeFocus) {
 		case FOCUS_NOTE:
 			MIDIEditor_OnCommand(editor, 40181); // Edit: Move notes left one pixel
@@ -871,10 +977,12 @@ void cmdMidiMoveEventLeftPixelFocus(Command* command) {
 		default:
 			break;
 	}
+	isHandlingCommand = true;
 }
 
 void cmdMidiMoveEventRightPixelFocus(Command* command) {
 	HWND editor = MIDIEditor_GetActive();
+	isHandlingCommand = false;
 	switch (fakeFocus) {
 		case FOCUS_NOTE:
 			MIDIEditor_OnCommand(editor, 40182); // Edit: Move notes right one pixel
@@ -885,10 +993,12 @@ void cmdMidiMoveEventRightPixelFocus(Command* command) {
 		default:
 			break;
 	}
+	isHandlingCommand = true;
 }
 
 void cmdMidiMoveEventLeftGridFocus(Command* command) {
 	HWND editor = MIDIEditor_GetActive();
+	isHandlingCommand = false;
 	switch (fakeFocus) {
 		case FOCUS_NOTE:
 			MIDIEditor_OnCommand(editor, 40183); // Edit: Move notes left one grid unit
@@ -899,10 +1009,12 @@ void cmdMidiMoveEventLeftGridFocus(Command* command) {
 		default:
 			break;
 	}
+	isHandlingCommand = true;
 }
 
 void cmdMidiMoveEventRightGridFocus(Command* command) {
 	HWND editor = MIDIEditor_GetActive();
+	isHandlingCommand = false;
 	switch (fakeFocus) {
 		case FOCUS_NOTE:
 			MIDIEditor_OnCommand(editor, 40184); // Edit: Move notes right one grid unit
@@ -913,20 +1025,21 @@ void cmdMidiMoveEventRightGridFocus(Command* command) {
 		default:
 			break;
 	}
+	isHandlingCommand = true;
 }
 
 void cmdMidiSelectSamePitchStartingInTimeSelection(Command* command) {
 	double tsStart,tsEnd;
 	GetSet_LoopTimeRange(false, false, &tsStart, &tsEnd, false);
 	if(tsStart == tsEnd) {
-		outputMessage("No time selection");
+		outputMessage(translate("no time selection"));
 		return;
 	}
 	HWND editor = MIDIEditor_GetActive();
 	MediaItem_Take* take = MIDIEditor_GetTake(editor);
 	int selNote = MIDI_EnumSelNotes(take, -1);
 	if(selNote==-1) {
-		outputMessage("No notes selected");
+		outputMessage(translate("no notes selected"));
 		return;
 	}
 	int selPitch;
@@ -948,6 +1061,34 @@ void cmdMidiSelectSamePitchStartingInTimeSelection(Command* command) {
 	Undo_EndBlock("OSARA: Select all notes with the same pitch within time selection",0);
 	ostringstream s;
 	s<< selectCount << " note"<<((selectCount==1)?"":"s")<<" selected";
+	outputMessage(s);
+}
+
+void cmdMidiNoteSplitOrJoin(Command* command) {
+	HWND editor = MIDIEditor_GetActive();
+	MediaItem_Take* take = MIDIEditor_GetTake(editor);
+	// Get selected note count before action.
+	auto oldCount = countSelectedNotes(take);
+	auto cmdId = command->gaccel.accel.cmd;
+	MIDIEditor_OnCommand(editor, cmdId);
+	auto newCount = countSelectedNotes(take);
+	if (oldCount == newCount) {
+		return;
+	}
+	ostringstream s;
+	s << oldCount << " notes ";
+	switch (cmdId) {
+		case 40046:
+			s << "split";
+			break;
+		case 40456:
+			s << "joined";
+			break;
+		default:
+			s << "transformed";
+			break;
+	}
+	s << " into " << newCount;
 	outputMessage(s);
 }
 
@@ -990,6 +1131,73 @@ void cmdMidiFilterWindow(Command *command) {
 	}
 }
 
+void maybePreviewCurrentNoteInEventList(HWND hwnd) {
+	if (!GetToggleCommandState2(SectionFromUniqueID(MIDI_EVENT_LIST_SECTION), 40041)) {  // Options: Preview notes when inserting or editing
+		return;
+	}
+	auto focused = ListView_GetNextItem(hwnd, -1, LVNI_FOCUSED);
+	char text[50] = "\0";
+	// Get the text from the length column (2).
+	// If this column is empty, we aren't dealing with a note.
+	ListView_GetItemText(hwnd, focused, 2, text, sizeof(text));
+	if (!text[0]) {
+		return;
+	}
+	MidiNote note;
+	// Convert length to project time. text is always in measures.beats.
+	auto length = parse_timestr_len(text, 0, 2);
+	text[0] = '\0';
+	// Get the text from the position column (1).
+	ListView_GetItemText(hwnd, focused, 1, text, sizeof(text));
+	// Convert this to project time. text is always in measures.beats.
+	note.start = parse_timestr_pos(text, 2);
+	note.end = note.start + length;
+	text[0] = '\0';
+	// Get the text from the channel column (3).
+	ListView_GetItemText(hwnd, focused, 3, text, sizeof(text));
+	note.channel = atoi(text) -1;
+	text[0] = '\0';
+	// Get the text from the parameter (note name) column (5).
+	ListView_GetItemText(hwnd, focused, 5, text, sizeof(text));
+	string noteNameWithOctave { text };
+	static const string noteNames[] = {"C", "C#", "D", "D#", "E", "F",
+		"F#", "G", "G#", "A", "A#", "B"};
+	// Loop through noteNames in reverse order so the sharp notes are handled first.
+	bool found = false;
+	for (int i = static_cast<int>(size(noteNames)) -1; i >= 0; --i) {
+		auto noteNameLength = noteNames[i].length();
+		if (noteNameWithOctave.compare(0, noteNameLength, noteNames[i]) != 0) {
+			continue;
+		}
+		found = true;
+		// The octave is a number in the range -1 up and until 9.
+		// Therefore, the number counts either one or two characters in noteNameWithOctave.
+		// If the note is explicitly named, the name comes after the octave and a space.
+		// As stoi simply ignores whitespace or the end of a string, all possible appearances should be covered.
+		int octave;
+		try {
+			octave = stoi(noteNameWithOctave.substr(noteNameLength, 2));
+		} catch (invalid_argument) {
+			// If a REAPER language pack translates note names, we might get something
+			// unexpected here. There's nothing we can do to compensate, so just
+			// gracefully ignore this.
+			continue;
+		}
+		note.pitch = ((octave + 1) * 12) + i;
+		break;
+	}
+	if (!found) {
+		return; // Note not found.
+	}
+	text[0] = '\0';
+	// Get the text from the value (velocity) column (6).
+	ListView_GetItemText(hwnd, focused, 6, text, sizeof(text));
+	note.velocity = atoi(text);
+	HWND editor = MIDIEditor_GetActive();
+	MediaItem_Take* take = MIDIEditor_GetTake(editor);
+	previewNotes(take, {note});
+}
+
 #endif // _WIN32
 
 void postMidiChangeVelocity(int command) {
@@ -1028,10 +1236,10 @@ void postMidiChangeVelocity(int command) {
 				s << "velocity +1";
 				break;
 			case 40463:
-				s << "velocity -1";
+				s << "velocity +10";
 				break;
 			case 40464:
-				s << "velocity +10";
+				s << "velocity -1";
 				break;
 			case 40465:
 				s << "velocity -10";
@@ -1057,6 +1265,10 @@ void postMidiChangeLength(int command) {
 	// Get selected notes.
 	vector<MidiNote> selectedNotes = getSelectedNotes(take);
 	if (selectedNotes.size() == 0) {
+		return;
+	}
+	if (command == 40765 && selectedNotes.size() == 1) {
+		// Making notes legato doesn't do anything when only one note is selected.
 		return;
 	}
 	bool generalize = false;
@@ -1094,7 +1306,13 @@ void postMidiChangeLength(int command) {
 					break;
 				case 40447:
 					s << "shortened grid unit";
-					break;				
+					break;
+				case 40633:
+					s << "length set to grid size";
+					break;
+				case 40765:
+					s << "made legato";
+					break;
 				default:
 					s << "length changed";
 					break;
@@ -1102,7 +1320,7 @@ void postMidiChangeLength(int command) {
 		} else{ 
 			for (auto note = selectedNotes.cbegin(); note != selectedNotes.cend(); ++note) {
 				s << getMidiNoteName(take, note->pitch, note->channel) << " ";
-				s			<< formatTime(note->getLength(), TF_MEASURE, true, false, false);
+				s << formatNoteLength(note->start, note->end);
 				if (note != selectedNotes.cend() - 1) {
 					s << ", ";
 				}
@@ -1150,11 +1368,11 @@ void postMidiChangePitch(int command) {
 			case 40178:
 				s << "semitone down";
 				break;
+			case 40179:
+				s << "octave up";
+				break;
 			case 40180:
 				s << "octave down";
-				break;
-			case 40181:
-				s << "octave up";
 				break;
 			case 41026:
 				s << "semitone up ignoring scale";
@@ -1241,7 +1459,7 @@ void postMidiChangeCCValue(int command) {
 	}
 	ostringstream s;
 	if (count > 1) {
-		s << count << " control values ";
+		s << count << " values ";
 		switch (command) {
 			case 40676: {
 				s << "increased";
@@ -1258,7 +1476,18 @@ void postMidiChangeCCValue(int command) {
 		}
 	} else{ 
 		auto cc = *selectedCCs.cbegin();
-		s << cc.value;
+		if (cc.message1 == 0xA0) {
+			// Note: separate the note and value with two spaces to avoid treatment as thausands separator.
+			s << getMidiNoteName(take, cc.message2, cc.channel) << "  ";
+			s << cc.message3;
+		} else if (cc.message1 == 0xB0) {
+			s << cc.message3;
+		} else if (cc.message1 == 0xC0 || cc.message1 == 0xD0) {
+			s << cc.message2;
+		} else if (cc.message1 == 0xE0) {
+			auto pitchBendValue = (cc.message3 << 7) | cc.message2;
+			s << pitchBendValue;
+		}
 	}
 	outputMessage(s);
 }
@@ -1312,5 +1541,21 @@ void postMidiSwitchCCLane(int command) {
 	char textBuffer[BUFFER_LENGTH];
 	MIDIEditor_GetSetting_str(editor, "last_clicked_cc_lane", textBuffer, BUFFER_LENGTH);
 	s << textBuffer;
+	outputMessage(s);
+}
+
+void postToggleMidiInputsAsStepInput(int command) {
+	ostringstream s;
+	s << (GetToggleCommandState2(SectionFromUniqueID(MIDI_EDITOR_SECTION),
+		command) ? "enabled" : "disabled");
+	s << " MIDI inputs as step input";
+	outputMessage(s);
+}
+
+void postToggleFunctionKeysAsStepInput(int command) {
+	ostringstream s;
+	s << (GetToggleCommandState2(SectionFromUniqueID(MIDI_EDITOR_SECTION),
+		command) ? "enabled" : "disabled");
+	s << " f1-f12 as step input";
 	outputMessage(s);
 }
