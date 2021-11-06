@@ -837,6 +837,41 @@ const string getMidiControlName(MediaItem_Take *take, int control, int channel) 
 	return s.str();
 }
 
+string formatCC(MediaItem_Take* take, MidiControlChange cc, bool includeControlName=false) {
+	ostringstream s;
+	if (cc.message1 == 0xA0) {
+		if (includeControlName) {
+			s << "Poly Aftertouch ";
+		}
+		// Note: separate the note and value with two spaces to avoid treatment as thausands separator.
+		s << getMidiNoteName(take, cc.message2, cc.channel) << "  ";
+		s << cc.message3;
+	} else if (cc.message1 == 0xB0) {
+		if (includeControlName) {
+			s << "Control ";
+			s << getMidiControlName(take, cc.message2, cc.channel) << ", ";
+		}
+		s << cc.message3;
+	} else if (cc.message1 == 0xC0) {
+		if (includeControlName) {
+			s << "Program ";
+		}
+		s << cc.message2;
+	} else if (cc.message1 == 0xD0) {
+		if (includeControlName) {
+			s << "Channel pressure ";
+		}
+		s << cc.message2;
+	} else if (cc.message1 == 0xE0) {
+		if (includeControlName) {
+			s << "Pitchhhh Bend ";
+		}
+		auto pitchBendValue = (cc.message3 << 7) | cc.message2;
+		s << pitchBendValue;
+	}
+	return s.str();
+}
+
 void moveToCC(int direction, bool clearSelection=true, bool select=true) {
 	HWND editor = MIDIEditor_GetActive();
 	MediaItem_Take* take = MIDIEditor_GetTake(editor);
@@ -861,23 +896,7 @@ void moveToCC(int direction, bool clearSelection=true, bool select=true) {
 	fakeFocus = FOCUS_CC;
 	ostringstream s;
 	s << formatCursorPosition(TF_MEASURE) << " ";
-	if (cc.message1 == 0xA0) {
-		s << "Poly Aftertouch ";
-		// Note: separate the note and value with two spaces to avoid treatment as thousands separator.
-		s << getMidiNoteName(take, cc.message2, cc.channel) << "  ";
-		s << cc.message3;
-	} else if (cc.message1 == 0xB0) {
-		s << "Control ";
-		s << getMidiControlName(take, cc.message2, cc.channel) << ", ";
-		s << cc.message3;
-	} else if (cc.message1 == 0xC0) {
-		s << "Program " << cc.message2;
-	} else if (cc.message1 == 0xD0) {
-		s << "Channel pressure " << cc.message2;
-	} else if (cc.message1 == 0xE0) {
-		auto pitchBendValue = (cc.message3 << 7) | cc.message2;
-		s << "Pitchhhh Bend " << pitchBendValue;
-	}
+	s << formatCC(take, cc, true);
 	if (!select && !isCCSelected(take, cc.index)) {
 		s << "unselected" << " ";
 	}
@@ -1476,18 +1495,7 @@ void postMidiChangeCCValue(int command) {
 		}
 	} else{ 
 		auto cc = *selectedCCs.cbegin();
-		if (cc.message1 == 0xA0) {
-			// Note: separate the note and value with two spaces to avoid treatment as thausands separator.
-			s << getMidiNoteName(take, cc.message2, cc.channel) << "  ";
-			s << cc.message3;
-		} else if (cc.message1 == 0xB0) {
-			s << cc.message3;
-		} else if (cc.message1 == 0xC0 || cc.message1 == 0xD0) {
-			s << cc.message2;
-		} else if (cc.message1 == 0xE0) {
-			auto pitchBendValue = (cc.message3 << 7) | cc.message2;
-			s << pitchBendValue;
-		}
+		s << formatCC(take, cc, false);
 	}
 	outputMessage(s);
 }
@@ -1523,9 +1531,8 @@ void postMidiMoveCC(int command) {
 		}
 	} else{ 
 		auto cc = *selectedCCs.cbegin();
-		s << formatTime(cc.position, TF_MEASURE) << " ";
-		s << getMidiControlName(take, cc.control, cc.channel) << ", ";
-		s << cc.value;
+		s << formatTime(cc.position, TF_MEASURE, false, false) << " ";
+		s << formatCC(take, cc, true);
 	}
 	outputMessage(s);
 }

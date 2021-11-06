@@ -98,6 +98,8 @@
 #define REAPERAPI_WANT_DeleteTempoTimeSigMarker
 #define REAPERAPI_WANT_MIDIEditor_GetActive
 #define REAPERAPI_WANT_MIDIEditor_GetTake
+#define REAPERAPI_WANT_MIDI_Sort
+#define REAPERAPI_WANT_MIDI_DisableSort
 #define REAPERAPI_WANT_MIDI_CountEvts
 #define REAPERAPI_WANT_MIDI_GetNote
 #define REAPERAPI_WANT_MIDI_SetNote
