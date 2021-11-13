@@ -1066,12 +1066,23 @@ void cmdFocusNearestMidiEvent(Command* command) {
 	if (!focus)
 		return;
 	double cursorPos = GetCursorPosition();
-	for (int i = 0; i < ListView_GetItemCount(focus); ++i) {
-		char text[50];
-		// Get the text from the position column (1).
-		ListView_GetItemText(focus, i, 1, text, sizeof(text));
-		// Convert this to project time. text is always in measures.beats.
-		double eventPos = parse_timestr_pos(text, 2);
+	HWND editor = MIDIEditor_GetActive();
+	assert(editor == GetParent(focus));
+	for (int i = 0; i < MIDIEditor_GetSetting_int(editor, "list_cnt"); ++i) {
+		auto setting = format("list_{}", i);
+		char eventData[255] = "\0";
+		if (!MIDIEditor_GetSetting_str(editor, setting.c_str(), eventData, sizeof(eventData))) {
+			continue;
+		}
+		auto eventValueMap = parseEventData(eventData);
+		// Check whether this event has a position
+		auto posIt = eventValueMap.find("pos");
+		if (posIt == eventValueMap.end()) {
+			// no position
+			continue;
+		}
+		auto eventPosQn = stof((*posIt).second);
+		auto eventPos = TimeMap2_QNToTime(nullptr, eventPosQn);
 		if (eventPos >= cursorPos) {
 			// This item is at or just after the cursor.
 			int oldFocus = ListView_GetNextItem(focus, -1, LVNI_FOCUSED);
@@ -1099,7 +1110,7 @@ void cmdMidiFilterWindow(Command *command) {
 	}
 }
 
-map<string, string> parseEventData(std::string const& source) {
+map<string, string> parseEventData(string const& source) {
 	map<string, string> m;
 	string key, val;
 	istringstream s(source);

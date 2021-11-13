@@ -41,6 +41,7 @@ void cmdMidiNoteSplitOrJoin(Command* command);
 #ifdef _WIN32
 void cmdFocusNearestMidiEvent(Command* command);
 void cmdMidiFilterWindow(Command* command);
+std::map<std::string, std::string> parseEventData(std::string const& source);
 void maybePreviewCurrentNoteInEventList(HWND hwnd);
 #endif
 
