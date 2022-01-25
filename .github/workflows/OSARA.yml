@@ -1,0 +1,28 @@
+name: OSARA
+env:
+  versionPrefix: "2022.1pre-"
+on:
+  push:
+  pull_request:
+    types: [opened, reopened]
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-11]
+    steps:
+      - uses: actions/setup-python@v2
+      - run: pip --disable-pip-version-check install --no-warn-script-location scons
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - run: python -m SCons installer
+      - uses: actions/upload-artifact@v2
+        with:
+          name: installer
+          path: |
+            installer/*.exe
+            installer/*.dmg
+            
