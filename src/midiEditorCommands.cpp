@@ -98,8 +98,12 @@ struct MidiControlChange {
 		return cc;
 	}
 
-	static const int getCount(MediaItem_Take* take) {
+	static const int getCount(MediaItem_Take* take, bool ignoreFilter=false) {
 		int count = 0;
+		if (ignoreFilter) {
+			MIDI_CountEvts(take, nullptr, &count, nullptr);
+			return count;
+		}
 		while (MIDI_GetCC(take, count, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr)) {
 			++count;
 		}
@@ -171,8 +175,12 @@ struct MidiNote {
 		return note;
 	}
 
-	static const int getCount(MediaItem_Take* take) {
+	static const int getCount(MediaItem_Take* take, bool ignoreFilter=false) {
 		int count = 0;
+		if (ignoreFilter) {
+			MIDI_CountEvts(take, &count, nullptr, nullptr);
+			return count;
+		}
 		while (MIDI_GetNote(take, count, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr)) {
 			++count;
 		}
@@ -572,7 +580,13 @@ const string getMidiNoteName(MediaItem_Take *take, int pitch, int channel) {
 }
 
 // Returns iterators to the first and exclusive last notes in a chord in a given direction.
-pair<MidiNoteIterator, MidiNoteIterator> findChord(MediaItem_Take* take, int direction, MidiNote::ReqParams reqParams={}) {
+pair<MidiNoteIterator, MidiNoteIterator> findChord(
+		MediaItem_Take* take,
+		int direction,
+		MidiNote::ReqParams reqParams={
+			true  // start
+		}
+) {
 	// Ensure we always collect the start of the note since we need it to find chords.
 	reqParams.start = true;
 	double now = GetCursorPosition();
@@ -691,12 +705,13 @@ void selectNote(MediaItem_Take* take, const int note, bool select=true) {
 }
 
 bool isNoteSelected(MediaItem_Take* take, const int note) {
+	// Note: Using MidiNote::get is overkill here
 	bool sel;
 	MIDI_GetNote(take, note, &sel, NULL, NULL, NULL, NULL, NULL, NULL);
 	return sel;
 }
 
-int countSelectedNotes(MediaItem_Take* take, int offset=-1) {
+int countSelectedNotes(MediaItem_Take* take, const int offset=-1) {
 	int noteIndex = offset;
 	int count = 0;
 	for(;;){
@@ -709,7 +724,18 @@ int countSelectedNotes(MediaItem_Take* take, int offset=-1) {
 	return count;
 }
 
-vector<MidiNote> getSelectedNotes(MediaItem_Take* take, int offset=-1) {
+vector<MidiNote> getSelectedNotes(
+		MediaItem_Take* take,
+		int offset=-1,
+		MidiNote::ReqParams reqParams={
+			true,  // start
+			true,  // end
+			true,  // channel
+			true,  // pitch
+			true,  // velocity
+			true  // selected
+		}
+) {
 	int noteIndex = offset;
 	vector<MidiNote> notes;
 	for(;;){
@@ -717,13 +743,7 @@ vector<MidiNote> getSelectedNotes(MediaItem_Take* take, int offset=-1) {
 		if (noteIndex == -1) {
 			break;
 		}
-		notes.push_back(MidiNote::get(take, noteIndex, {
-			true,  // start
-			true,  // end
-			true,  // channel
-			true,  // pitch
-			true  // velocity
-		}));
+		notes.push_back(MidiNote::get(take, noteIndex, reqParams));
 	}
 	return notes;
 }
@@ -738,7 +758,7 @@ MidiControlChange findCC(MediaItem_Take* take, int direction) {
 		true,  // message1
 		true,  // channel
 		true,  // message2
-		true  // message3,
+		true  // message3
 	});
 	MidiControlChangeIterator end = begin;
 	end.moveToEnd();
@@ -828,12 +848,24 @@ void selectCC(MediaItem_Take* take, const int cc, bool select=true) {
 }
 
 bool isCCSelected(MediaItem_Take* take, const int cc) {
+	// Note: Using MidiControlChange::get is overkill here
 	bool sel;
 	MIDI_GetCC(take, cc, &sel, NULL, NULL, NULL, NULL, NULL, NULL);
 	return sel;
 }
 
-vector<MidiControlChange> getSelectedCCs(MediaItem_Take* take, int offset=-1) {
+vector<MidiControlChange> getSelectedCCs(
+		MediaItem_Take* take,
+		int offset=-1,
+		MidiControlChange::ReqParams reqParams={
+			true,  // position
+			true,  // message1
+			true,  // channel
+			true,  // message2
+			true,  // message3
+			true  // selected
+		}
+) {
 	int ccIndex = offset;
 	vector<MidiControlChange> ccs;
 	for (;;) {
@@ -841,11 +873,7 @@ vector<MidiControlChange> getSelectedCCs(MediaItem_Take* take, int offset=-1) {
 		if (ccIndex == -1) {
 			break;
 		}
-		double position;
-		int chan, msg1, msg2, msg3;
-		MIDI_GetCC(take, ccIndex, NULL, NULL, &position, &msg1, &chan, &msg2, &msg3);
-		position = MIDI_GetProjTimeFromPPQPos(take, position);
-		ccs.push_back({chan, ccIndex, msg1, msg2, msg3, position});
+		ccs.push_back(MidiControlChange::get(take, ccIndex, reqParams));
 	}
 	return ccs;
 }
@@ -1032,11 +1060,10 @@ void postMidiMovePitchCursor(int command) {
 void cmdMidiInsertNote(Command* command) {
 	HWND editor = MIDIEditor_GetActive();
 	MediaItem_Take* take = MIDIEditor_GetTake(editor);
-	int oldCount;
-	MIDI_CountEvts(take, &oldCount, nullptr, nullptr);
+	// Note: ensure that the count of inserted notes is based on all events, ignoring any filter.
+	int oldCount = MidiNote::getCount(take, true);
 	MIDIEditor_OnCommand(editor, command->gaccel.accel.cmd);
-	int newCount;
-	MIDI_CountEvts(take, &newCount, nullptr, nullptr);
+	int newCount = MidiNote::getCount(take, true);
 	if (newCount <= oldCount) {
 		return; // Not inserted.
 	}
@@ -1075,6 +1102,9 @@ void cmdMidiInsertNote(Command* command) {
 void cmdMidiDeleteEvents(Command* command) {
 	HWND editor = MIDIEditor_GetActive();
 	MediaItem_Take* take = MIDIEditor_GetTake(editor);
+	// Note: explicitly use MIDI_CountEvts here as it counts all events and ignores filtered ones.
+	// We want to make sure that the count of deleted events is reported correctly, i.e. including deleted formerly filtered events.
+	// Also note that, unlike when selecting events, 
 	int oldCount = MIDI_CountEvts(take, NULL, NULL, NULL);
 	MIDIEditor_OnCommand(editor, command->gaccel.accel.cmd);
 	int removed = oldCount - MIDI_CountEvts(take, NULL, NULL, NULL);
@@ -1087,14 +1117,7 @@ void cmdMidiDeleteEvents(Command* command) {
 void postMidiSelectNotes(int command) {
 	HWND editor = MIDIEditor_GetActive();
 	MediaItem_Take* take = MIDIEditor_GetTake(editor);
-	int noteIndex=-1;
-	int count=0;
-	for(;;){
-		noteIndex = MIDI_EnumSelNotes(take, noteIndex);
-		if (noteIndex == -1)
-			break;
-		++count;
-	}
+	int count = countSelectedNotes(take);
 	fakeFocus = FOCUS_NOTE;
 	// Translators: used when notes are selected in the MIDI editor.
 	// {} is replaced by the number of notes. E.g. "4 notes selected"
@@ -1103,20 +1126,13 @@ void postMidiSelectNotes(int command) {
 		count ));
 }
 
-int countSelectedEvents(MediaItem_Take* take) {
-	int evtIndex=-1;
-	int count=0;
+int countSelectedEvents(MediaItem_Take* take, const int offset=-1) {
+	int evtIndex = offset;
+	int count = 0;
 	for(;;){
 		evtIndex = MIDI_EnumSelEvts(take, evtIndex);
 		if (evtIndex == -1) {
 			break;
-		}
-		unsigned char msg[3] = "\0";
-		int size = sizeof(msg);
-		MIDI_GetEvt(take, evtIndex, /* selectedOut */ nullptr, /* mutedOut */ nullptr,
-			/* ppqposOut */ nullptr, (char*)msg, &size);
-		if (0x80 <= msg[0] && msg[0] <= 0x8F) {
-			continue; // Don't count note off messages.
 		}
 		++count;
 	}
@@ -1137,12 +1153,25 @@ void postMidiSelectEvents(int command) {
 		count));
 }
 
+int countSelectedCCs(MediaItem_Take* take, const int offset=-1) {
+	int ccIndex = offset;
+	int count = 0;
+	for(;;){
+		ccIndex = MIDI_EnumSelCC(take, ccIndex);
+		if (ccIndex == -1) {
+			break;
+		}
+		++count;
+	}
+	return count;
+}
+
 void cmdMidiToggleSelCC (Command* command) {
 	HWND editor = MIDIEditor_GetActive();
 	MediaItem_Take* take = MIDIEditor_GetTake(editor);
-	int oldCount = countSelectedEvents (take);
+	int oldCount = countSelectedCCs(take);
 	MIDIEditor_OnCommand(editor, command->gaccel.accel.cmd);
-	int newCount = countSelectedEvents (take);
+	int newCount = countSelectedCCs(take);
 	int count = newCount - oldCount;
 	if (count >= 0) {
 		// Translators: Used in the MIDI editor when CC events are selected.  {}
@@ -1384,7 +1413,7 @@ void cmdMidiMoveToTrack(Command* command) {
 }
 
 void cmdMidiSelectSamePitchStartingInTimeSelection(Command* command) {
-	double tsStart,tsEnd;
+	double tsStart, tsEnd;
 	GetSet_LoopTimeRange(false, false, &tsStart, &tsEnd, false);
 	if(tsStart == tsEnd) {
 		outputMessage(translate("no time selection"));
@@ -1401,16 +1430,21 @@ void cmdMidiSelectSamePitchStartingInTimeSelection(Command* command) {
 	MIDI_GetNote(take, selNote, nullptr, nullptr, nullptr, nullptr, nullptr, &selPitch, nullptr);
 	Undo_BeginBlock();
 	MIDIEditor_OnCommand(editor, 40214); // Edit: Unselect all
-	int noteCount {0}, selectCount {0};
-	MIDI_CountEvts(take, &noteCount, nullptr, nullptr);
-	for(int i=0; i<noteCount; i++) {
-		double startPPQPos;
-		int pitch;
-		MIDI_GetNote(take, i, nullptr, nullptr, &startPPQPos, nullptr, nullptr, &pitch, nullptr);
-		double startTime = MIDI_GetProjTimeFromPPQPos(take, startPPQPos);
-		if(tsStart<=startTime && startTime<tsEnd && pitch==selPitch) {
-			selectNote(take, i);
-			selectCount++;
+	MidiNoteIterator begin(take, {
+		true,  // start
+		false,  // end
+		false,  // channel
+		true  // pitch
+	});
+	auto end = begin;
+	begin.moveToEnd();
+	auto tsStartIt = lower_bound(begin, end, tsStart, MidiNote::CompareByStart{});
+	auto tsEndIt = upper_bound(tsStartIt, end, tsEnd, MidiNote::CompareByStart{});
+	int selectCount = 0;
+	for (auto it = tsStartIt; it < tsEndIt; ++it) {
+		if (it->pitch == selPitch) {
+			selectNote(take, it.getIndex());
+			++selectCount;
 		}
 	}
 	Undo_EndBlock("OSARA: Select all notes with the same pitch within time selection",0);
