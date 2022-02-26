@@ -7,7 +7,7 @@ branches:
 environment:
  matrix:
   - job_name: Windows
-    appveyor_build_worker_image: Visual Studio 2022
+    appveyor_build_worker_image: Previous Visual Studio 2022
     PY_PYTHON: 3.9-32
   - job_name: Mac
     appveyor_build_worker_image: macos-bigsur
@@ -32,6 +32,10 @@ init:
 clone_depth: 1
 
 install:
+ # There's no point in building if we're going to fail the build because of
+ # unsorted key maps, so we do this as early as we can.
+ - cmd: py tools/sortKeymap.py -t config/windows/reaper-kb.ini
+ - cmd: py tools/sortKeymap.py -t config/mac/reaper-kb.ini
  - ps: |
      If (!$env:APPVEYOR_PULL_REQUEST_NUMBER) {
       cd ci

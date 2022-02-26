@@ -195,6 +195,7 @@
 #define REAPERAPI_WANT_SetOnlyTrackSelected
 #define REAPERAPI_WANT_MIDI_GetEvt
 #define REAPERAPI_WANT_TrackFX_GetParamFromIdent
+#define REAPERAPI_WANT_TrackFX_GetNamedConfigParm
 #include <reaper/reaper_plugin.h>
 #include <reaper/reaper_plugin_functions.h>
 
@@ -241,7 +242,9 @@ extern enum FakeFocus fakeFocus;
 
 extern bool isSelectionContiguous;
 extern bool shouldMoveToAutoItem;
+extern int lastCommand;
 
+bool shouldReportTimeMovement() ;
 void outputMessage(const std::string& message, bool interrupt = true);
 void outputMessage(std::ostringstream& message, bool interrupt = true);
 
@@ -259,6 +262,7 @@ std::string formatTime(double time, TimeFormat format=TF_RULER, bool isLength=fa
 void resetTimeCache(TimeFormat excludeFormat=TF_NONE);
 std::string formatNoteLength(double start, double end);
 std::string formatCursorPosition(TimeFormat format=TF_RULER, bool useCache=true);
+const char* getActionName(int command, KbdSectionInfo* section=nullptr, bool skipCategory=true);
 
 bool isTrackSelected(MediaTrack* track);
 

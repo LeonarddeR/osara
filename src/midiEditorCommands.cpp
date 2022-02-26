@@ -1292,7 +1292,7 @@ void moveToCC(int direction, bool clearSelection=true, bool select=true) {
 		selectCC(take, cc.index);
 	}
 	if (clearSelection || select) {
-		Undo_EndBlock("Change CC Selection", 0);
+		Undo_EndBlock(translate("Change CC Selection"), 0);
 	}
 	SetEditCurPos(cc.position, true, false);
 	fakeFocus = FOCUS_CC;
@@ -1372,13 +1372,13 @@ void midiMoveToItem(int direction) {
 void cmdMidiMoveToNextItem(Command* command) {
 	Undo_BeginBlock();
 	midiMoveToItem(1);
-	Undo_EndBlock("OSARA: Move to next midi item on track", 0);
+	Undo_EndBlock(translate("OSARA: Move to next midi item on track"), 0);
 }
 
 void cmdMidiMoveToPrevItem(Command* command) {
 	Undo_BeginBlock();
 	midiMoveToItem(-1);
-	Undo_EndBlock("OSARA: Move to previous midi item on track", 0);
+	Undo_EndBlock(translate("OSARA: Move to previous midi item on track"), 0);
 }
 
 void cmdMidiMoveToTrack(Command* command) {
@@ -1447,7 +1447,7 @@ void cmdMidiSelectSamePitchStartingInTimeSelection(Command* command) {
 			++selectCount;
 		}
 	}
-	Undo_EndBlock("OSARA: Select all notes with the same pitch within time selection",0);
+	Undo_EndBlock(translate("OSARA: Select all notes with the same pitch within time selection"), 0);
 	// Translators: used when notes are selected in the MIDI editor.
 	// {} is replaced by the number of notes. E.g. "4 notes selected"
 	outputMessage(format(
@@ -1572,7 +1572,7 @@ void maybeHandleEventListItemFocus(HWND hwnd, long childId) {
 		return;
 	}
 	// Check whether this is a note
-	if (event.length == 0) {
+	if (event.length == -1) {
 		// No Note
 		return;
 	}
