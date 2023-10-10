@@ -38,9 +38,8 @@ AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 # Add a space after the colon in bit fields.
 BitFieldColonSpacing: After
-# Break before binary operators that are not assignments.
-# E.g. break before "+", but not before "+=".
-BreakBeforeBinaryOperators: NonAssignment
+# Don't break before binary operators.
+BreakBeforeBinaryOperators: None
 # Attach opening braces to the same line as the statement or declaration it belongs to.
 BreakBeforeBraces: Attach
 # Ternary operators will be placed after line breaks.
