@@ -93,3 +93,9 @@ SpaceBeforeSquareBrackets: false
 TabWidth: 2
 # Always use tabs for indentation.
 UseTab: Always
+# Don't touch lines used for translation.
+WhitespaceSensitiveMacros: [
+	'translate_plural',
+	'translate',
+	'translate_ctxt'
+]
