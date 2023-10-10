@@ -75,7 +75,7 @@ PointerAlignment: Left
 # Separate definition blocks (Always, Never, or Leave).
 SeparateDefinitionBlocks: Always
 # Number of spaces before trailing comments.
-SpacesBeforeTrailingComments: 1
+SpacesBeforeTrailingComments: 2
 # Do not add a space after a C-style cast.
 SpaceAfterCStyleCast: false
 # Do not add a space after the template keyword.
@@ -90,8 +90,8 @@ SpaceBeforeParens: ControlStatements
 SpaceBeforeSquareBrackets: false
 # Width of a tab character.
 TabWidth: 2
-# Always use tabs for indentation.
-UseTab: Always
+# Use tabs for continuation and indentation.
+UseTab: ForContinuationAndIndentation
 # Don't touch lines used for translation.
 WhitespaceSensitiveMacros: [
 	'translate_plural',
