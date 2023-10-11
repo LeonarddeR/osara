@@ -9,7 +9,7 @@ BasedOnStyle: Google
 # Offset for access modifiers (public, protected, private).
 AccessModifierOffset: 0
 # Align code after an open bracket with block indentation.
-AlignAfterOpenBracket: BlockIndent
+AlignAfterOpenBracket: DontAlign
 # Do not align consecutive assignments.
 AlignConsecutiveAssignments: None
 # Do not align consecutive bit fields.
@@ -49,7 +49,7 @@ BreakStringLiterals: true
 # Indentation width for constructor initializers.
 ConstructorInitializerIndentWidth: 2
 # Indentation width for continuation lines.
-ContinuationIndentWidth: 2
+ContinuationIndentWidth: 4
 # Format braced lists as best suited for C++11 braced lists.
 Cpp11BracedListStyle: true
 # Use a fixed alignment for all pointers.
