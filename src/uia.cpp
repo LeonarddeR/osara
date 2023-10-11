@@ -5,14 +5,16 @@
  * License: GNU General Public License version 2.0
  */
 
-#include <uiautomation.h>
+#include <atlcomcli.h>
 #include <ole2.h>
 #include <tlhelp32.h>
-#include <atlcomcli.h>
+#include <uiautomation.h>
+
 #include <memory>
 #include <utility>
-#include "osara.h"
+
 #include "config.h"
+#include "osara.h"
 
 using namespace std;
 
@@ -37,11 +39,11 @@ class UiaCore {
 	}
 
 	decltype(UiaRaiseNotificationEvent)* RaiseNotificationEvent =
-		getFunc<decltype(UiaRaiseNotificationEvent)>("UiaRaiseNotificationEvent");
-	decltype(UiaDisconnectProvider)* DisconnectProvider = 
-		getFunc<decltype(UiaDisconnectProvider)>("UiaDisconnectProvider");
+			getFunc<decltype(UiaRaiseNotificationEvent)>("UiaRaiseNotificationEvent");
+	decltype(UiaDisconnectProvider)* DisconnectProvider =
+			getFunc<decltype(UiaDisconnectProvider)>("UiaDisconnectProvider");
 	decltype(UiaDisconnectAllProviders)* DisconnectAllProviders =
-		getFunc<decltype(UiaDisconnectAllProviders)>("UiaDisconnectAllProviders");
+			getFunc<decltype(UiaDisconnectAllProviders)>("UiaDisconnectAllProviders");
 };
 
 unique_ptr<UiaCore> uiaCore;
@@ -49,7 +51,7 @@ unique_ptr<UiaCore> uiaCore;
 // Provider code based on Microsoft's uiautomationSimpleProvider example.
 class UiaProvider : public IRawElementProviderSimple {
 	public:
-	UiaProvider(_In_ HWND hwnd): refCount(0), controlHWnd(hwnd) {}
+	UiaProvider(_In_ HWND hwnd) : refCount(0), controlHWnd(hwnd) {}
 
 	// IUnknown methods
 	ULONG STDMETHODCALLTYPE AddRef() {
@@ -64,14 +66,15 @@ class UiaProvider : public IRawElementProviderSimple {
 		return val;
 	}
 
-	HRESULT STDMETHODCALLTYPE QueryInterface(_In_ REFIID riid, _Outptr_ void** ppInterface) {
+	HRESULT STDMETHODCALLTYPE QueryInterface(
+			_In_ REFIID riid, _Outptr_ void** ppInterface) {
 		if (ppInterface) {
 			return E_INVALIDARG;
 		}
 		if (riid == __uuidof(IUnknown)) {
-			*ppInterface =static_cast<IRawElementProviderSimple*>(this);
+			*ppInterface = static_cast<IRawElementProviderSimple*>(this);
 		} else if (riid == __uuidof(IRawElementProviderSimple)) {
-			*ppInterface =static_cast<IRawElementProviderSimple*>(this);
+			*ppInterface = static_cast<IRawElementProviderSimple*>(this);
 		} else {
 			*ppInterface = nullptr;
 			return E_NOINTERFACE;
@@ -81,18 +84,22 @@ class UiaProvider : public IRawElementProviderSimple {
 	}
 
 	// IRawElementProviderSimple methods
-	HRESULT STDMETHODCALLTYPE get_ProviderOptions(_Out_ ProviderOptions* pRetVal) {
-		*pRetVal = ProviderOptions_ServerSideProvider | ProviderOptions_UseComThreading;
+	HRESULT STDMETHODCALLTYPE get_ProviderOptions(
+			_Out_ ProviderOptions* pRetVal) {
+		*pRetVal =
+				ProviderOptions_ServerSideProvider | ProviderOptions_UseComThreading;
 		return S_OK;
 	}
 
-	HRESULT STDMETHODCALLTYPE GetPatternProvider(PATTERNID patternId, _Outptr_result_maybenull_ IUnknown** pRetVal) {
+	HRESULT STDMETHODCALLTYPE GetPatternProvider(
+			PATTERNID patternId, _Outptr_result_maybenull_ IUnknown** pRetVal) {
 		// We do not support any pattern.
 		*pRetVal = NULL;
 		return S_OK;
 	}
 
-	HRESULT STDMETHODCALLTYPE GetPropertyValue(PROPERTYID propertyId, _Out_ VARIANT* pRetVal) {
+	HRESULT STDMETHODCALLTYPE GetPropertyValue(
+			PROPERTYID propertyId, _Out_ VARIANT* pRetVal) {
 		switch (propertyId) {
 			case UIA_ControlTypePropertyId:
 				// Stop Narrator from ever speaking this as a window
@@ -115,16 +122,16 @@ class UiaProvider : public IRawElementProviderSimple {
 		return S_OK;
 	}
 
-	HRESULT STDMETHODCALLTYPE get_HostRawElementProvider(IRawElementProviderSimple** pRetVal) {
+	HRESULT STDMETHODCALLTYPE get_HostRawElementProvider(
+			IRawElementProviderSimple** pRetVal) {
 		return UiaHostProviderFromHwnd(controlHWnd, pRetVal);
 	}
 
 	private:
-	virtual ~UiaProvider() {
-	}
+	virtual ~UiaProvider() {}
 
-	ULONG refCount; // Ref Count for this COM object
-	HWND controlHWnd; // The HWND for the control.
+	ULONG refCount;  // Ref Count for this COM object
+	HWND controlHWnd;  // The HWND for the control.
 };
 
 CComPtr<IRawElementProviderSimple> uiaProvider;
@@ -132,7 +139,8 @@ CComPtr<IRawElementProviderSimple> uiaProvider;
 LRESULT CALLBACK uiaWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 		case WM_GETOBJECT:
-			if (static_cast<long>(lParam) == static_cast<long>(UiaRootObjectId) && uiaProvider) {
+			if (static_cast<long>(lParam) == static_cast<long>(UiaRootObjectId) &&
+					uiaProvider) {
 				return UiaReturnRawElementProvider(hwnd, wParam, lParam, uiaProvider);
 			}
 			return 0;
@@ -166,21 +174,11 @@ bool initializeUia() {
 		return false;
 	}
 	uiaWnd = CreateWindowEx(
-		// Make it transparent because it has to have width/height.
-		WS_EX_TRANSPARENT,
-		WINDOW_CLASS_NAME,
-		"Reaper OSARA Notifications",
-		WS_CHILD | WS_DISABLED,
-		0,
-		0,
-		// UIA notifications fail if the window has 0 width/height.
-		1,
-		1,
-		mainHwnd,
-		0,
-		pluginHInstance,
-		nullptr
-	);
+			// Make it transparent because it has to have width/height.
+			WS_EX_TRANSPARENT, WINDOW_CLASS_NAME, "Reaper OSARA Notifications",
+			WS_CHILD | WS_DISABLED, 0, 0,
+			// UIA notifications fail if the window has 0 width/height.
+			1, 1, mainHwnd, 0, pluginHInstance, nullptr);
 	if (!uiaWnd) {
 		return false;
 	}
@@ -217,18 +215,18 @@ bool shouldUseUiaNotifications() {
 			// Not available (requires Windows 10 fall creators update or above).
 			return false;
 		}
-		const char setting = GetExtState(CONFIG_SECTION, "uiaNotificationEvents")[0];
+		const char setting =
+				GetExtState(CONFIG_SECTION, "uiaNotificationEvents")[0];
 		if (setting == '0') {
-			return false; // Force disable.
+			return false;  // Force disable.
 		} else if (setting == '2') {
-			return true; // Force enable.
+			return true;  // Force enable.
 		}
 		// Setting not present or '1' means auto.
 		// Several screen readers ignore or don't support UIA notification events.
 		// First check for screen readers with in-process dlls.
-		if (
-			GetModuleHandleA("jhook.dll") // JAWS
-			|| GetModuleHandleA("dolwinhk.dll") // Dolphin
+		if (GetModuleHandleA("jhook.dll")  // JAWS
+				|| GetModuleHandleA("dolwinhk.dll")  // Dolphin
 		) {
 			return false;
 		}
@@ -241,11 +239,9 @@ bool sendUiaNotification(const string& message, bool interrupt) {
 	if (!UiaClientsAreListening() || message.empty()) {
 		return true;
 	}
-	return (uiaCore->RaiseNotificationEvent(
-		uiaProvider,
-		NotificationKind_Other,
-		interrupt ? NotificationProcessing_MostRecent : NotificationProcessing_All,
-		SysAllocString(widen(message).c_str()),
-		SysAllocString(L"REAPER_OSARA")
-	) == S_OK);
+	return (uiaCore->RaiseNotificationEvent(uiaProvider, NotificationKind_Other,
+							interrupt ? NotificationProcessing_MostRecent
+												: NotificationProcessing_All,
+							SysAllocString(widen(message).c_str()),
+							SysAllocString(L"REAPER_OSARA")) == S_OK);
 }

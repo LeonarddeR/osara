@@ -5,16 +5,18 @@
  * License: GNU General Public License version 2.0
  */
 
-#include <string>
-#include <sstream>
+#include <WDL/db2val.h>
+
+#include <cstdint>
 #include <iomanip>
 #include <map>
-#include <WDL/db2val.h>
-#include <cstdint>
-#include "osara.h"
+#include <sstream>
+#include <string>
+
 #include "config.h"
-#include "paramsUi.h"
 #include "midiEditorCommands.h"
+#include "osara.h"
+#include "paramsUi.h"
 #include "translation.h"
 
 using namespace std;
@@ -39,7 +41,7 @@ const uint8_t TC_UNARMED = 1 << 5;
 template<uint8_t enableFlag, uint8_t disableFlag>
 class TrackCacheState {
 	public:
-	TrackCacheState(uint8_t& value): value(value) {}
+	TrackCacheState(uint8_t& value) : value(value) {}
 
 	// Check if a supplied new state has changed from the cached state.
 	bool hasChanged(bool isEnabled) {
@@ -64,9 +66,10 @@ class TrackCacheState {
 	uint8_t& value;
 };
 
-/*** A control surface to obtain certain info that can only be retrieved that way.
+/*** A control surface to obtain certain info that can only be retrieved that
+ * way.
  */
-class Surface: public IReaperControlSurface {
+class Surface : public IReaperControlSurface {
 	public:
 	virtual const char* GetTypeString() override {
 		return "OSARA";
@@ -196,11 +199,10 @@ class Surface: public IReaperControlSurface {
 
 	virtual void SetSurfaceSelected(MediaTrack* track, bool selected) override {
 		if (!selected || !settings::reportSurfaceChanges ||
-			// REAPER calls this a *lot*, even if the track was already selected; e.g.
-			// for mute, arm, solo, etc. Ignore this if we were already told about
-			// this track being selected.
-			track == lastSelectedTrack
-		) {
+				// REAPER calls this a *lot*, even if the track was already selected;
+				// e.g. for mute, arm, solo, etc. Ignore this if we were already told
+				// about this track being selected.
+				track == lastSelectedTrack) {
 			return;
 		}
 		// Cache the track even if we're handling a command because that command
@@ -214,17 +216,18 @@ class Surface: public IReaperControlSurface {
 		postGoToTrack(0, track);
 	}
 
-	virtual int Extended(int call, void* parm1, void* parm2, void* parm3) override {
+	virtual int Extended(
+			int call, void* parm1, void* parm2, void* parm3) override {
 		if (call == CSURF_EXT_SETFXPARAM) {
 			if (!this->shouldHandleParamChange()) {
-				return 0; // Unsupported.
+				return 0;  // Unsupported.
 			}
 			auto track = (MediaTrack*)parm1;
 			int fx = *(int*)parm2 >> 16;
 			// Don't report parameter changes where they might already be reported by
 			// the UI.
 			if (isParamsDialogOpen || TrackFX_GetChainVisible(track) == fx) {
-				return 0; // Unsupported.
+				return 0;  // Unsupported.
 			}
 			int param = *(int*)parm2 & 0xFFFF;
 			double normVal = *(double*)parm3;
@@ -243,8 +246,8 @@ class Surface: public IReaperControlSurface {
 				s << chunk << " ";
 			}
 			this->lastParam = param;
-			TrackFX_FormatParamValueNormalized(track, fx, param, normVal, chunk,
-				sizeof(chunk));
+			TrackFX_FormatParamValueNormalized(
+					track, fx, param, normVal, chunk, sizeof(chunk));
 			if (chunk[0]) {
 				s << chunk;
 			} else {
@@ -252,16 +255,16 @@ class Surface: public IReaperControlSurface {
 			}
 			outputMessage(s);
 		}
-		return 0; // Unsupported.
+		return 0;  // Unsupported.
 	}
 
 	private:
 	bool wasCausedByCommand() {
 		return isHandlingCommand ||
-			// Sometimes, REAPER updates control surfaces after a command rather than
-			// during. If the last command OSARA handled was <= 50 ms ago, we assume
-			// this update was caused by that command.
-			GetTickCount() - lastCommandTime <= 50;
+				// Sometimes, REAPER updates control surfaces after a command rather
+				// than during. If the last command OSARA handled was <= 50 ms ago, we
+				// assume this update was caused by that command.
+				GetTickCount() - lastCommandTime <= 50;
 	}
 
 	// Used for parameters we don't cache such as volume, pan and FX parameters.
@@ -276,14 +279,15 @@ class Surface: public IReaperControlSurface {
 		// Only handle param changes if the last change was 100ms or more ago.
 		return now - prevChangeTime >= 100;
 	}
+
 	DWORD lastParamChangeTime = 0;
 
 	bool reportTrackIfDifferent(MediaTrack* track, ostringstream& output) {
 		bool different = track != this->lastChangedTrack;
 		if (different) {
 			this->lastChangedTrack = track;
-			int trackNum = (int)(size_t)GetSetMediaTrackInfo(track, "IP_TRACKNUMBER",
-				nullptr);
+			int trackNum =
+					(int)(size_t)GetSetMediaTrackInfo(track, "IP_TRACKNUMBER", nullptr);
 			if (trackNum <= 0) {
 				output << translate("master");
 			} else {

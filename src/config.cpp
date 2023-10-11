@@ -6,11 +6,13 @@
  * License: GNU General Public License version 2.0
  */
 
+#include "config.h"
+
 #include <algorithm>
 #include <map>
-#include <string>
 #include <sstream>
-#include "config.h"
+#include <string>
+
 #include "resource.h"
 #include "translation.h"
 
@@ -21,7 +23,7 @@ namespace settings {
 #define BoolSetting(name, displayName, default) bool name = default;
 #include "settings.h"
 #undef BoolSetting
-}
+}  // namespace settings
 
 void loadConfig() {
 	// GetExtState returns an empty string (not NULL) if the key doesn't exist.
@@ -42,9 +44,8 @@ void config_onOk(HWND dialog) {
 #undef BoolSetting
 }
 
-INT_PTR CALLBACK config_dialogProc(HWND dialog, UINT msg, WPARAM wParam,
-	LPARAM lParam
-) {
+INT_PTR CALLBACK config_dialogProc(
+		HWND dialog, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 		case WM_COMMAND:
 			if (LOWORD(wParam) == IDOK) {
@@ -65,12 +66,11 @@ INT_PTR CALLBACK config_dialogProc(HWND dialog, UINT msg, WPARAM wParam,
 
 void cmdConfig(Command* command) {
 	HWND dialog = CreateDialog(pluginHInstance, MAKEINTRESOURCE(ID_CONFIG_DLG),
-		GetForegroundWindow(), config_dialogProc);
+			GetForegroundWindow(), config_dialogProc);
 	translateDialog(dialog);
 	int id = ID_CONFIG_DLG;
 #define BoolSetting(name, displayName, default) \
-	CheckDlgButton(dialog, ++id, \
-		settings::name ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(dialog, ++id, settings::name ? BST_CHECKED : BST_UNCHECKED);
 #include "settings.h"
 #undef BoolSetting
 	ShowWindow(dialog, SW_SHOWNORMAL);
@@ -85,6 +85,7 @@ struct ToggleCommand {
 	string settingName;
 	string settingDisp;
 };
+
 map<int, ToggleCommand> toggleCommands;
 
 bool handleSettingCommand(int command) {
@@ -95,11 +96,11 @@ bool handleSettingCommand(int command) {
 	isHandlingCommand = true;
 	ToggleCommand& tc = it->second;
 	*tc.setting = !*tc.setting;
-	SetExtState(CONFIG_SECTION, tc.settingName.c_str(), *tc.setting ? "1" : "0",
-		true);
+	SetExtState(
+			CONFIG_SECTION, tc.settingName.c_str(), *tc.setting ? "1" : "0", true);
 	ostringstream s;
-	s << (*tc.setting ? translate("enabled") : translate("disabled")) <<
-		" " << tc.settingDisp;
+	s << (*tc.setting ? translate("enabled") : translate("disabled"))
+			<< " " << tc.settingDisp;
 	outputMessage(s);
 	isHandlingCommand = false;
 	return true;
@@ -126,8 +127,9 @@ void registerSettingCommands() {
 		gaccel.accel.cmd = cmd; \
 		tc.settingDisp = translate(displayName); \
 		/* Strip the '&' character indicating the access key. */ \
-		tc.settingDisp.erase(remove(tc.settingDisp.begin(), tc.settingDisp.end(), \
-			'&'), tc.settingDisp.end()); \
+		tc.settingDisp.erase( \
+				remove(tc.settingDisp.begin(), tc.settingDisp.end(), '&'), \
+				tc.settingDisp.end()); \
 		s.str(""); \
 		s << translate("OSARA: Toggle") << " " << tc.settingDisp; \
 		tc.desc = s.str(); \

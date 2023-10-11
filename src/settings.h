@@ -14,33 +14,19 @@
  */
 
 // Usage: BoolSetting(name, displayName, defaultValue)
-BoolSetting(reportScrub,
-	"Report position when &scrubbing",
-	true)
-BoolSetting(reportTimeMovementWhilePlaying,
-	"Report time movement during playback/recording",
-	true)
-BoolSetting(reportFullTimeMovement,
-	"Report f&ull time for time movement commands",
-	false)
-BoolSetting(moveFromPlayCursor,
-	"&Move relative to the play cursor for time movement commands during playback",
-	false)
-BoolSetting(reportMarkersWhilePlaying,
-	"Report mar&kers during playback",
-	false)
-BoolSetting(reportTransport,
-	"Report &transport state (play, record, etc.)",
-	true)
-BoolSetting(reportTrackNumbers,
-	"&Report track numbers",
-	true)
-BoolSetting(reportFx,
-	"Report &FX when moving to tracks/takes",
-	false)
-BoolSetting(reportNotes,
-	"Report MIDI &notes in MIDI editor",
-	true)
-BoolSetting(reportSurfaceChanges,
-	"Report changes made via &control surfaces",
-	false)
+BoolSetting(reportScrub, "Report position when &scrubbing", true)
+		BoolSetting(reportTimeMovementWhilePlaying,
+				"Report time movement during playback/recording",
+				true) BoolSetting(reportFullTimeMovement,
+				"Report f&ull time for time movement commands",
+				false) BoolSetting(moveFromPlayCursor,
+				"&Move relative to the play cursor for time movement commands during "
+				"playback",
+				false) BoolSetting(reportMarkersWhilePlaying,
+				"Report mar&kers during playback", false) BoolSetting(reportTransport,
+				"Report &transport state (play, record, etc.)",
+				true) BoolSetting(reportTrackNumbers, "&Report track numbers", true)
+				BoolSetting(reportFx, "Report &FX when moving to tracks/takes", false)
+						BoolSetting(reportNotes, "Report MIDI &notes in MIDI editor", true)
+								BoolSetting(reportSurfaceChanges,
+										"Report changes made via &control surfaces", false)

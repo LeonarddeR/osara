@@ -10,16 +10,18 @@
 // headers.
 #include "osara.h"
 #ifdef _WIN32
-# include <windowsx.h>
-# include <CommCtrl.h>
+#include <CommCtrl.h>
+#include <windowsx.h>
 #endif
-#include <string>
-#include <vector>
+#include <WDL/win32_utf8.h>
+
 #include <algorithm>
 #include <iomanip>
 #include <memory>
 #include <regex>
-#include <WDL/win32_utf8.h>
+#include <string>
+#include <vector>
+
 #include "resource.h"
 #include "translation.h"
 
@@ -27,7 +29,7 @@ using namespace std;
 
 bool isFxListFocused() {
 	return GetWindowLong(GetFocus(), GWL_ID) == 1076 &&
-		GetFocusedFX(nullptr, nullptr, nullptr) != 0;
+			GetFocusedFX(nullptr, nullptr, nullptr) != 0;
 }
 
 void shortenFxName(const char* name, ostringstream& s) {
@@ -56,14 +58,12 @@ bool maybeSwitchToFxPluginWindow() {
 	char name[8];
 	if (GetWindowText(window, name, sizeof(name)) == 0)
 		return false;
-	if (strncmp(name, "FX: ", 4) != 0 && // FX chain window
-		// floating FX window, for different plug-in types
-		strncmp(name, "DX: ", 4) != 0 &&
-		strncmp(name, "VST: ", 5) != 0 &&
-		strncmp(name, "VSTi: ", 6) != 0 &&
-		strncmp(name, "VST3: ", 6) != 0 &&
-		strncmp(name, "VST3i: ", 7) != 0
-	) {
+	if (strncmp(name, "FX: ", 4) !=
+					0 &&  // FX chain window
+								// floating FX window, for different plug-in types
+			strncmp(name, "DX: ", 4) != 0 &&
+			strncmp(name, "VST: ", 5) != 0 && strncmp(name, "VSTi: ", 6) != 0 &&
+			strncmp(name, "VST3: ", 6) != 0 && strncmp(name, "VST3i: ", 7) != 0) {
 		return false;
 	}
 	// Descend. Observed as the first or as the last.
@@ -75,7 +75,7 @@ bool maybeSwitchToFxPluginWindow() {
 	if (GetWindowText(window, name, sizeof(name)) == 0) {
 		SetWindowText(window, " ");
 	}
-	// Descend. Observed as the first or as the last. 
+	// Descend. Observed as the first or as the last.
 	// Can not just search, we do not know the class nor name.
 	if (!(window = GetWindow(window, GW_CHILD)))
 		return false;
@@ -88,7 +88,7 @@ bool maybeSwitchToFxPluginWindow() {
 		if (!(window = GetWindow(window, GW_HWNDLAST))) {
 			return false;
 		}
-	} // else it is the first
+	}  // else it is the first
 	// We have found plug-in window or its container
 	HWND plugin = window;
 	// if focus is already inside plug-in window, let F6 work as usual
@@ -104,7 +104,7 @@ bool maybeSwitchToFxPluginWindow() {
 	while (window) {
 		SetFocus(window);
 		if ((window == plugin) || (GetFocus() == window)) {
-			break; // success or the last possible attempt
+			break;  // success or the last possible attempt
 		}
 		window = GetParent(window);
 	}
@@ -120,14 +120,14 @@ bool maybeReportFxChainBypass(bool aboutToToggle) {
 	int trackNum, itemNum, fx;
 	int type = GetFocusedFX(&trackNum, &itemNum, &fx);
 	if (type == 0) {
-		return false; // No FX chain focused.
+		return false;  // No FX chain focused.
 	}
-	MediaTrack* track = trackNum == 0 ?
-		GetMasterTrack(nullptr) : GetTrack(nullptr, trackNum - 1);
+	MediaTrack* track =
+			trackNum == 0 ? GetMasterTrack(nullptr) : GetTrack(nullptr, trackNum - 1);
 	bool enabled;
-	if (type == 1) { // Track
+	if (type == 1) {  // Track
 		enabled = TrackFX_GetEnabled(track, fx);
-	} else if (type == 2) { // Item
+	} else if (type == 2) {  // Item
 		MediaItem* item = GetTrackMediaItem(track, itemNum);
 		int takeNum = HIWORD(fx);
 		fx = LOWORD(fx);
@@ -139,8 +139,9 @@ bool maybeReportFxChainBypass(bool aboutToToggle) {
 	if (aboutToToggle) {
 		enabled = !enabled;
 	}
-	outputMessage(enabled ? translate("active") : translate("bypassed"),
-		/* interrupt */ false);
+	outputMessage(enabled ? translate("active")
+												: translate("bypassed"),
+															/* interrupt */ false);
 	return true;
 }
 
@@ -150,6 +151,7 @@ bool maybeReportFxChainBypass(bool aboutToToggle) {
 // 3. We want to give braille users a chance to read the effect name before
 // the message with the bypass state clobbers it.
 UINT_PTR reportFxChainBypassTimer = 0;
+
 bool maybeReportFxChainBypassDelayed() {
 	if (reportFxChainBypassTimer) {
 		KillTimer(nullptr, reportFxChainBypassTimer);
@@ -168,9 +170,9 @@ bool maybeReportFxChainBypassDelayed() {
 
 class PresetDialog {
 	private:
-	HWND combo; // REAPER's FX preset combo box.
+	HWND combo;  // REAPER's FX preset combo box.
 	HWND dialog;
-	HWND list; // Our preset ListView.
+	HWND list;  // Our preset ListView.
 	string filter;
 
 	void close() {
@@ -179,7 +181,8 @@ class PresetDialog {
 		delete this;
 	}
 
-	static INT_PTR CALLBACK dialogProc(HWND dialogHwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	static INT_PTR CALLBACK dialogProc(
+			HWND dialogHwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		auto dialog = (PresetDialog*)GetWindowLongPtr(dialogHwnd, GWLP_USERDATA);
 		switch (msg) {
 			case WM_COMMAND:
@@ -210,7 +213,7 @@ class PresetDialog {
 		// We want to match case insensitively, so convert to lower case.
 		transform(text.begin(), text.end(), text.begin(), ::tolower);
 		if (this->filter.compare(text) == 0) {
-			return; // No change.
+			return;  // No change.
 		}
 		this->filter = text;
 		this->updateList();
@@ -239,7 +242,7 @@ class PresetDialog {
 				break;
 			}
 			// len doesn't inclue null terminator.
-			auto text = make_unique<char[]>(len + 1); 
+			auto text = make_unique<char[]>(len + 1);
 			SendMessage(this->combo, CB_GETLBTEXT, comboIndex, (LPARAM)text.get());
 			if (!this->shouldIncludePreset(text.get())) {
 				continue;
@@ -276,15 +279,14 @@ class PresetDialog {
 			ComboBox_SetCurSel(this->combo, preset);
 			LONG controlId = GetWindowLong(this->combo, GWL_ID);
 			SendMessage(GetParent(this->combo), WM_COMMAND,
-				MAKEWPARAM(controlId, CBN_SELCHANGE), (LPARAM)this->combo);
+					MAKEWPARAM(controlId, CBN_SELCHANGE), (LPARAM)this->combo);
 		}
 	}
 
 	public:
-
-	PresetDialog(HWND presetCombo): combo(presetCombo) {
+	PresetDialog(HWND presetCombo) : combo(presetCombo) {
 		this->dialog = CreateDialog(pluginHInstance,
-			MAKEINTRESOURCE(ID_FX_PRESET_DLG), mainHwnd, PresetDialog::dialogProc);
+				MAKEINTRESOURCE(ID_FX_PRESET_DLG), mainHwnd, PresetDialog::dialogProc);
 		translateDialog(this->dialog);
 		SetWindowLongPtr(this->dialog, GWLP_USERDATA, (LONG_PTR)this);
 		this->list = GetDlgItem(this->dialog, ID_FXPRE_PRESET);
@@ -296,7 +298,6 @@ class PresetDialog {
 		this->updateList();
 		ShowWindow(this->dialog, SW_SHOWNORMAL);
 	}
-
 };
 
 bool maybeOpenFxPresetDialog() {
@@ -310,12 +311,11 @@ bool maybeOpenFxPresetDialog() {
 	return true;
 }
 
-void CALLBACK fireValueChangeOnFocus(HWND hwnd, UINT msg, UINT_PTR event,
-	DWORD time
-) {
+void CALLBACK fireValueChangeOnFocus(
+		HWND hwnd, UINT msg, UINT_PTR event, DWORD time) {
 	KillTimer(nullptr, event);
-	NotifyWinEvent(EVENT_OBJECT_VALUECHANGE, GetFocus(), OBJID_CLIENT,
-		CHILDID_SELF);
+	NotifyWinEvent(
+			EVENT_OBJECT_VALUECHANGE, GetFocus(), OBJID_CLIENT, CHILDID_SELF);
 }
 
 bool maybeSwitchFxTab(bool previous) {
@@ -329,9 +329,9 @@ bool maybeSwitchFxTab(bool previous) {
 		if (isClassName(hwnd, "SysTabControl32")) {
 			auto tabCtrl = (HWND*)lParam;
 			*tabCtrl = hwnd;
-			return FALSE; // Stop enumeration.
+			return FALSE;  // Stop enumeration.
 		}
-		return TRUE; // Continue enumeration.
+		return TRUE;  // Continue enumeration.
 	};
 	EnumChildWindows(GetForegroundWindow(), findTabCtrl, (LPARAM)&tabCtrl);
 	if (!tabCtrl) {
@@ -369,4 +369,4 @@ bool maybeSwitchFxTab(bool previous) {
 	return true;
 }
 
-#endif // _WIN32
+#endif  // _WIN32

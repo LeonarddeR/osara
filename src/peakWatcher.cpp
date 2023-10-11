@@ -7,13 +7,14 @@
  */
 
 #include <math.h>
-#include <string>
-#include <sstream>
-#include <iomanip>
+
 #include <cassert>
+#include <iomanip>
+#include <sstream>
+#include <string>
+#include <utility>
 #include <variant>
 #include <vector>
-#include <utility>
 // osara.h includes windows.h, which must be included before other Windows
 // headers.
 #include "osara.h"
@@ -21,9 +22,10 @@
 #include <Commctrl.h>
 #include <Windowsx.h>
 #endif
-#include <WDL/win32_utf8.h>
 #include <WDL/db2val.h>
 #include <WDL/wdltypes.h>
+#include <WDL/win32_utf8.h>
+
 #include "fxChain.h"
 #include "resource.h"
 #include "translation.h"
@@ -55,14 +57,14 @@ void stop();
 struct LevelType {
 	const char* name;
 	bool (*isSupported)(const Target& target);
-	bool separateChannels : 1;
+	bool separateChannels: 1;
 	// If true, smaller values are more significant to the user than larger ones.
 	// This means that values less than the notification level will be reported
 	// and the minimum value will be held if appropriate.
 	// If false, larger values are more significant to the user than smaller ones.
 	// This means that values greater than the notification level will be reported
 	// and the maximum value will be held if appropriate.
-	bool isSmallerSignificant : 1;
+	bool isSmallerSignificant: 1;
 	double (*getLevel)(Watcher& watcher, int channel);
 	void (*reset)(Watcher& watcher);
 
@@ -78,8 +80,8 @@ struct LevelType {
 };
 
 void describeTrack(MediaTrack* track, ostringstream& s) {
-	int trackNum = (int)(size_t)GetSetMediaTrackInfo(track, "IP_TRACKNUMBER",
-		nullptr);
+	int trackNum =
+			(int)(size_t)GetSetMediaTrackInfo(track, "IP_TRACKNUMBER", nullptr);
 	if (trackNum <= 0) {
 		s << translate("master");
 	} else {
@@ -120,6 +122,7 @@ class Watcher {
 	double notifyLevel = 0;
 	// Hold time in ms; -1 disabled, 0 forever.
 	int hold = 0;
+
 	struct {
 		bool notify = true;
 		double peak = NO_LEVEL;
@@ -170,33 +173,30 @@ const int NUM_WATCHERS = 2;
 Watcher watchers[NUM_WATCHERS];
 
 const char* WATCHER_NAMES[NUM_WATCHERS] = {
-	// translate firstString begin
-	"1st watcher",
-	"2nd watcher",
-	// translate firstString end
+		// translate firstString begin
+		"1st watcher", "2nd watcher",
+		// translate firstString end
 };
 const char* CHANNEL_NAMES[NUM_CHANNELS] = {
-	// translate firstString begin
-	"1st chan",
-	"2nd chan",
-	// translate firstString end
+		// translate firstString begin
+		"1st chan", "2nd chan",
+		// translate firstString end
 };
 
 UINT_PTR timer = 0;
 
 const char FX_LOUDNESS_METER[] = "loudness_meter";
 
-double getLoudnessMeterParam(Watcher& watcher,
-	int configParam, double configValue, int queryParam
-) {
+double getLoudnessMeterParam(
+		Watcher& watcher, int configParam, double configValue, int queryParam) {
 	assert(holds_alternative<MediaTrack*>(watcher.target));
 	MediaTrack* track = varGet<MediaTrack*>(watcher.target);
-	int fx = TrackFX_AddByName(track, FX_LOUDNESS_METER, /* recFX */ false,
-		0 /* don't create */);
+	int fx = TrackFX_AddByName(
+			track, FX_LOUDNESS_METER, /* recFX */ false, 0 /* don't create */);
 	if (fx == -1) {
 		// Add the effect.
 		fx = TrackFX_AddByName(track, FX_LOUDNESS_METER, /* recFX */ false,
-			1 /* create if not found */);
+				1 /* create if not found */);
 		if (fx == -1) {
 			// Effect doesn't exist!
 			return NO_LEVEL;
@@ -221,8 +221,8 @@ double getLoudnessMeterParam(Watcher& watcher,
 void deleteLoudnessMeter(Watcher& watcher) {
 	assert(holds_alternative<MediaTrack*>(watcher.target));
 	MediaTrack* track = varGet<MediaTrack*>(watcher.target);
-	int fx = TrackFX_AddByName(track, FX_LOUDNESS_METER, /* recFX */ false,
-		0 /* don't create */);
+	int fx = TrackFX_AddByName(
+			track, FX_LOUDNESS_METER, /* recFX */ false, 0 /* don't create */);
 	if (fx != -1) {
 		TrackFX_Delete(track, fx);
 	}
@@ -235,116 +235,136 @@ bool isTrackLevelTypeSupported(const Target& target) {
 const char FXPARM_GAIN_REDUCTION[] = "GainReduction_dB";
 
 const LevelType LEVEL_TYPES[] = {
-	// translate firstString begin
-	{"peak dB",
-		/* isSupported */ isTrackLevelTypeSupported,
-		/* separateChannels */ true,
-		/* isSmallerSignificant */ false,
-		/* getValue */ [](Watcher& watcher, int channel) {
-			assert(holds_alternative<MediaTrack*>(watcher.target));
-			MediaTrack* track = varGet<MediaTrack*>(watcher.target);
-			// #119: We use Track_GetPeakHoldDB even when Peak Watcher's hold
-			//  functionality is disabled because we only measure every 30 ms and we
-			// might miss peaks.
-			// Undocumented: Track_GetPeakHoldDB returns hundredths of a dB.
-			double newPeak = Track_GetPeakHoldDB(track, channel, false) * 100.0;
-			// We have the peak now, so reset REAPER's hold.
-			Track_GetPeakHoldDB(track, channel, true);
-			return newPeak;
+		// translate firstString begin
+		{
+				"peak dB",
+				/* isSupported */ isTrackLevelTypeSupported,
+				/* separateChannels */ true,
+				/* isSmallerSignificant */ false,
+				/* getValue */
+				[](Watcher& watcher, int channel) {
+					assert(holds_alternative<MediaTrack*>(watcher.target));
+					MediaTrack* track = varGet<MediaTrack*>(watcher.target);
+					// #119: We use Track_GetPeakHoldDB even when Peak Watcher's hold
+					//  functionality is disabled because we only measure every 30 ms and
+					//  we
+					// might miss peaks.
+					// Undocumented: Track_GetPeakHoldDB returns hundredths of a dB.
+					double newPeak = Track_GetPeakHoldDB(track, channel, false) * 100.0;
+					// We have the peak now, so reset REAPER's hold.
+					Track_GetPeakHoldDB(track, channel, true);
+					return newPeak;
+				},
+				/* reset */ nullptr,
 		},
-		/* reset */ nullptr,
-	},
-	{"integrated LUFS",
-		/* isSupported */ isTrackLevelTypeSupported,
-		/* separateChannels */ false,
-		/* isSmallerSignificant */ false,
-		/* getValue */ [](Watcher& watcher, int channel) {
-			return getLoudnessMeterParam(watcher, 6, 1.0, 20);
+		{
+				"integrated LUFS",
+				/* isSupported */ isTrackLevelTypeSupported,
+				/* separateChannels */ false,
+				/* isSmallerSignificant */ false,
+				/* getValue */
+				[](Watcher& watcher, int channel) {
+					return getLoudnessMeterParam(watcher, 6, 1.0, 20);
+				},
+				/* reset */ deleteLoudnessMeter,
 		},
-		/* reset */ deleteLoudnessMeter,
-	},
-	{"momentary LUFS",
-		/* isSupported */ isTrackLevelTypeSupported,
-		/* separateChannels */ false,
-		/* isSmallerSignificant */ false,
-		/* getValue */ [](Watcher& watcher, int channel) {
-			return getLoudnessMeterParam(watcher, 3, 1.0, 18);
+		{
+				"momentary LUFS",
+				/* isSupported */ isTrackLevelTypeSupported,
+				/* separateChannels */ false,
+				/* isSmallerSignificant */ false,
+				/* getValue */
+				[](Watcher& watcher, int channel) {
+					return getLoudnessMeterParam(watcher, 3, 1.0, 18);
+				},
+				/* reset */ deleteLoudnessMeter,
 		},
-		/* reset */ deleteLoudnessMeter,
-	},
-	{"short term LUFS",
-		/* isSupported */ isTrackLevelTypeSupported,
-		/* separateChannels */ false,
-		/* isSmallerSignificant */ false,
-		/* getValue */ [](Watcher& watcher, int channel) {
-			return getLoudnessMeterParam(watcher, 4, 1.0, 19);
+		{
+				"short term LUFS",
+				/* isSupported */ isTrackLevelTypeSupported,
+				/* separateChannels */ false,
+				/* isSmallerSignificant */ false,
+				/* getValue */
+				[](Watcher& watcher, int channel) {
+					return getLoudnessMeterParam(watcher, 4, 1.0, 19);
+				},
+				/* reset */ deleteLoudnessMeter,
 		},
-		/* reset */ deleteLoudnessMeter,
-	},
-	{"loudness range LU",
-		/* isSupported */ isTrackLevelTypeSupported,
-		/* separateChannels */ false,
-		/* isSmallerSignificant */ false,
-		/* getValue */ [](Watcher& watcher, int channel) {
-			return getLoudnessMeterParam(watcher, 5, 1.0, 21);
+		{
+				"loudness range LU",
+				/* isSupported */ isTrackLevelTypeSupported,
+				/* separateChannels */ false,
+				/* isSmallerSignificant */ false,
+				/* getValue */
+				[](Watcher& watcher, int channel) {
+					return getLoudnessMeterParam(watcher, 5, 1.0, 21);
+				},
+				/* reset */ deleteLoudnessMeter,
 		},
-		/* reset */ deleteLoudnessMeter,
-	},
-	{"integrated RMS",
-		/* isSupported */ isTrackLevelTypeSupported,
-		/* separateChannels */ false,
-		/* isSmallerSignificant */ false,
-		/* getValue */ [](Watcher& watcher, int channel) {
-			return getLoudnessMeterParam(watcher, 2, 1.0, 17);
+		{
+				"integrated RMS",
+				/* isSupported */ isTrackLevelTypeSupported,
+				/* separateChannels */ false,
+				/* isSmallerSignificant */ false,
+				/* getValue */
+				[](Watcher& watcher, int channel) {
+					return getLoudnessMeterParam(watcher, 2, 1.0, 17);
+				},
+				/* reset */ deleteLoudnessMeter,
 		},
-		/* reset */ deleteLoudnessMeter,
-	},
-	{"momentary RMS",
-		/* isSupported */ isTrackLevelTypeSupported,
-		/* separateChannels */ false,
-		/* isSmallerSignificant */ false,
-		/* getValue */ [](Watcher& watcher, int channel) {
-			return getLoudnessMeterParam(watcher, 1, 1.0, 16);
+		{
+				"momentary RMS",
+				/* isSupported */ isTrackLevelTypeSupported,
+				/* separateChannels */ false,
+				/* isSmallerSignificant */ false,
+				/* getValue */
+				[](Watcher& watcher, int channel) {
+					return getLoudnessMeterParam(watcher, 1, 1.0, 16);
+				},
+				/* reset */ deleteLoudnessMeter,
 		},
-		/* reset */ deleteLoudnessMeter,
-	},
-	{"true peak dBTP",
-		/* isSupported */ isTrackLevelTypeSupported,
-		/* separateChannels */ false,
-		/* isSmallerSignificant */ false,
-		/* getValue */ [](Watcher& watcher, int channel) {
-			return getLoudnessMeterParam(watcher, 0, 1.0, 15);
+		{
+				"true peak dBTP",
+				/* isSupported */ isTrackLevelTypeSupported,
+				/* separateChannels */ false,
+				/* isSmallerSignificant */ false,
+				/* getValue */
+				[](Watcher& watcher, int channel) {
+					return getLoudnessMeterParam(watcher, 0, 1.0, 15);
+				},
+				/* reset */ deleteLoudnessMeter,
 		},
-		/* reset */ deleteLoudnessMeter,
-	},
-	{"gain reduction dB",
-		/* isSupported */ [](const Target& target) {
-			const TrackFx* tfx = get_if<TrackFx>(&target);
-			if (!tfx) {
-				return false;
-			}
-			char text[1];
-			return TrackFX_GetNamedConfigParm(tfx->first, tfx->second,
-				FXPARM_GAIN_REDUCTION, text, sizeof(text));
+		{
+				"gain reduction dB",
+				/* isSupported */
+				[](const Target& target) {
+					const TrackFx* tfx = get_if<TrackFx>(&target);
+					if (!tfx) {
+						return false;
+					}
+					char text[1];
+					return TrackFX_GetNamedConfigParm(tfx->first, tfx->second,
+							FXPARM_GAIN_REDUCTION, text, sizeof(text));
+				},
+				/* separateChannels */ false,
+				/* isSmallerSignificant */ true,
+				/* getValue */
+				[](Watcher& watcher, int channel) {
+					const TrackFx* tfx = get_if<TrackFx>(&watcher.target);
+					assert(tfx);
+					char text[10];
+					if (!TrackFX_GetNamedConfigParm(tfx->first, tfx->second,
+									FXPARM_GAIN_REDUCTION, text, sizeof(text))) {
+						return NO_LEVEL;
+					}
+					return stod(text);
+				},
+				/* reset */ nullptr,
 		},
-		/* separateChannels */ false,
-		/* isSmallerSignificant */ true,
-		/* getValue */ [](Watcher& watcher, int channel) {
-			const TrackFx* tfx = get_if<TrackFx>(&watcher.target);
-			assert(tfx);
-			char text[10];
-			if (!TrackFX_GetNamedConfigParm(tfx->first, tfx->second,
-					FXPARM_GAIN_REDUCTION, text, sizeof(text))) {
-				return NO_LEVEL;
-			}
-			return stod(text);
-		},
-		/* reset */ nullptr,
-	},
-	// translate firstString end
+		// translate firstString end
 };
-constexpr unsigned int NUM_LEVEL_TYPES = sizeof(LEVEL_TYPES) /
-	sizeof(LevelType);
+constexpr unsigned int NUM_LEVEL_TYPES =
+		sizeof(LEVEL_TYPES) / sizeof(LevelType);
 
 const LevelType& Watcher::levelTypeInfo() {
 	return LEVEL_TYPES[this->levelType];
@@ -365,7 +385,7 @@ void Watcher::description(ostringstream& s) {
 	s << " " << translate(this->levelTypeInfo().name);
 }
 
-void resetWatcher(int watcherIndex, bool report=false) {
+void resetWatcher(int watcherIndex, bool report = false) {
 	Watcher& watcher = watchers[watcherIndex];
 	watcher.reset();
 	if (report) {
@@ -410,7 +430,7 @@ void CALLBACK tick(HWND hwnd, UINT msg, UINT_PTR event, DWORD time) {
 				watcher.reset();
 				watcher.target = latest;
 				if (!watcher.isValid()) {
-					continue; // No current target, so nothing to do.
+					continue;  // No current target, so nothing to do.
 				}
 			}
 		} else if (!watcher.isValid()) {
@@ -419,25 +439,22 @@ void CALLBACK tick(HWND hwnd, UINT msg, UINT_PTR event, DWORD time) {
 				// All watchers are disabled, so stop processing altogether.
 				return;
 			}
-			continue; // No target, so skip this watcher.
+			continue;  // No target, so skip this watcher.
 		}
 
 		// If this level type doesn't care about separate channels, we only need
 		// to process one channel.
-		const int numChannels = levelType.separateChannels ?
-			NUM_CHANNELS : 1;
+		const int numChannels = levelType.separateChannels ? NUM_CHANNELS : 1;
 		bool watcherReported = false;
 		for (int c = 0; c < numChannels; ++c) {
 			auto& chan = watcher.channels[c];
-			double newPeak = levelType.getLevel(watcher, c) ;
-			if (watcher.hold == -1 // Hold disabled
-				|| levelType.isLevelSignificant(newPeak, chan.peak)
-				|| (watcher.hold != 0 && time > chan.time + watcher.hold)
-			) {
+			double newPeak = levelType.getLevel(watcher, c);
+			if (watcher.hold == -1  // Hold disabled
+					|| levelType.isLevelSignificant(newPeak, chan.peak) ||
+					(watcher.hold != 0 && time > chan.time + watcher.hold)) {
 				chan.peak = newPeak;
 				chan.time = time;
-				if (chan.notify &&
-						newPeak != NO_LEVEL &&
+				if (chan.notify && newPeak != NO_LEVEL &&
 						levelType.isLevelSignificant(newPeak, watcher.notifyLevel)) {
 					if (s.tellp() > 0) {
 						s << ", ";
@@ -485,9 +502,9 @@ bool isWatchingAnything() {
 Target getFocusedTarget() {
 	int trackNum, itemNum, fx;
 	int type = GetFocusedFX(&trackNum, &itemNum, &fx);
-	if (type == 1) { // Track
-		MediaTrack* track = trackNum == 0 ?
-			GetMasterTrack(nullptr) : GetTrack(nullptr, trackNum - 1);
+	if (type == 1) {  // Track
+		MediaTrack* track = trackNum == 0 ? GetMasterTrack(nullptr)
+																			: GetTrack(nullptr, trackNum - 1);
 		return TrackFx(track, fx);
 	}
 
@@ -527,12 +544,13 @@ class Dialog {
 			targetChanged = true;
 		}
 
-		this->watcher.follow = IsDlgButtonChecked(this->dialog, ID_PEAK_FOLLOW)
-			== BST_CHECKED;
+		this->watcher.follow =
+				IsDlgButtonChecked(this->dialog, ID_PEAK_FOLLOW) == BST_CHECKED;
 
 		// Retrieve the level type.
 		HWND typeSel = GetDlgItem(this->dialog, ID_PEAK_TYPE);
-		unsigned int newType = this->supportedLevelTypes[ComboBox_GetCurSel(typeSel)];
+		unsigned int newType =
+				this->supportedLevelTypes[ComboBox_GetCurSel(typeSel)];
 		if (newType != this->watcher.levelType) {
 			// If the target changed, we already reset.
 			if (!targetChanged) {
@@ -544,46 +562,47 @@ class Dialog {
 		// Retrieve the notification state for channels.
 		for (int c = 0; c < NUM_CHANNELS; ++c) {
 			this->watcher.channels[c].notify =
-				IsDlgButtonChecked(this->dialog, ID_PEAK_CHAN1 + c) == BST_CHECKED;
+					IsDlgButtonChecked(this->dialog, ID_PEAK_CHAN1 + c) == BST_CHECKED;
 		}
 
 		char inText[7];
 		// Retrieve the entered maximum level.
-		if (GetDlgItemText(this->dialog, ID_PEAK_LEVEL, inText, sizeof(inText)) > 0) {
+		if (GetDlgItemText(this->dialog, ID_PEAK_LEVEL, inText, sizeof(inText)) >
+				0) {
 			this->watcher.notifyLevel = atof(inText);
 			// Restrict the range.
 			this->watcher.notifyLevel =
-				max(min(this->watcher.notifyLevel, 40.0), -40.0);
+					max(min(this->watcher.notifyLevel, 40.0), -40.0);
 		}
 
 		// Retrieve the hold choice/time.
-		if (IsDlgButtonChecked(this->dialog, ID_PEAK_HOLD_DISABLED) == BST_CHECKED) {
+		if (IsDlgButtonChecked(this->dialog, ID_PEAK_HOLD_DISABLED) ==
+				BST_CHECKED) {
 			this->watcher.hold = -1;
 		} else if (IsDlgButtonChecked(this->dialog, ID_PEAK_HOLD_FOREVER) ==
 				BST_CHECKED) {
 			this->watcher.hold = 0;
 		} else if (GetDlgItemText(this->dialog, ID_PEAK_HOLD_TIME, inText,
-				sizeof(inText)) > 0) {
+									 sizeof(inText)) > 0) {
 			this->watcher.hold = atoi(inText);
 			// Restrict the range.
 			this->watcher.hold = max(min(this->watcher.hold, 20000), 1);
 		}
 
-		if (!timer) { // Previously disabled or paused.
+		if (!timer) {  // Previously disabled or paused.
 			start();
 		}
 	}
 
-	static INT_PTR CALLBACK dialogProc(HWND dialogHwnd, UINT msg,
-		WPARAM wParam, LPARAM lParam
-	) {
+	static INT_PTR CALLBACK dialogProc(
+			HWND dialogHwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		Dialog* dialog = (Dialog*)GetWindowLongPtr(dialogHwnd, GWLP_USERDATA);
 		switch (msg) {
 			case WM_COMMAND: {
 				int id = LOWORD(wParam);
 				if (ID_PEAK_HOLD_DISABLED <= id && id <= ID_PEAK_HOLD_FOR) {
 					EnableWindow(GetDlgItem(dialogHwnd, ID_PEAK_HOLD_TIME),
-						id == ID_PEAK_HOLD_FOR ? BST_CHECKED : BST_UNCHECKED);
+							id == ID_PEAK_HOLD_FOR ? BST_CHECKED : BST_UNCHECKED);
 				} else if (id == ID_PEAK_RESET) {
 					dialog->watcher.reset();
 					DestroyWindow(dialogHwnd);
@@ -619,14 +638,15 @@ class Dialog {
 	}
 
 	public:
-	Dialog(Target target, Watcher& watcher,
-			vector<unsigned int> supportedLevelTypes):
-			target(target), watcher(watcher),
+	Dialog(
+			Target target, Watcher& watcher, vector<unsigned int> supportedLevelTypes)
+		: target(target),
+			watcher(watcher),
 			supportedLevelTypes(supportedLevelTypes) {
 		ostringstream s;
-		this->dialog = CreateDialog(pluginHInstance,
-			MAKEINTRESOURCE(ID_PEAK_WATCHER_DLG), GetForegroundWindow(),
-			Dialog::dialogProc);
+		this->dialog =
+				CreateDialog(pluginHInstance, MAKEINTRESOURCE(ID_PEAK_WATCHER_DLG),
+						GetForegroundWindow(), Dialog::dialogProc);
 		SetWindowLongPtr(this->dialog, GWLP_USERDATA, (LONG_PTR)this);
 		translateDialog(this->dialog);
 		s << translate_ctxt("Peak Watcher", "Peak Watcher") << ": ";
@@ -642,8 +662,8 @@ class Dialog {
 			EnableWindow(follow, false);
 			followChecked = false;
 		}
-		CheckDlgButton(this->dialog, ID_PEAK_FOLLOW, followChecked ?
-			BST_CHECKED : BST_UNCHECKED);
+		CheckDlgButton(this->dialog, ID_PEAK_FOLLOW,
+				followChecked ? BST_CHECKED : BST_UNCHECKED);
 
 		HWND typeCombo = GetDlgItem(this->dialog, ID_PEAK_TYPE);
 		WDL_UTF8_HookComboBox(typeCombo);
@@ -654,15 +674,15 @@ class Dialog {
 			unsigned int t = supportedLevelTypes[i];
 			const LevelType& type = LEVEL_TYPES[t];
 			ComboBox_AddString(typeCombo, translate(type.name));
-			if ( watcher.levelType == t) {
+			if (watcher.levelType == t) {
 				typeSel = i;
 			}
 		}
 		ComboBox_SetCurSel(typeCombo, typeSel);
 
 		for (int c = 0; c < NUM_CHANNELS; ++c) {
-			CheckDlgButton(this->dialog, ID_PEAK_CHAN1 + c, watcher.channels[c].notify
-				? BST_CHECKED : BST_UNCHECKED);
+			CheckDlgButton(this->dialog, ID_PEAK_CHAN1 + c,
+					watcher.channels[c].notify ? BST_CHECKED : BST_UNCHECKED);
 		}
 
 		HWND level = GetDlgItem(this->dialog, ID_PEAK_LEVEL);
@@ -717,7 +737,7 @@ void report(int watcherIndex, int channel) {
 	outputMessage(s);
 }
 
-} // namespace peakWatcher
+}  // namespace peakWatcher
 
 void cmdPeakWatcher(Command* command) {
 	peakWatcher::Target target = peakWatcher::getFocusedTarget();
@@ -754,8 +774,9 @@ void cmdPeakWatcher(Command* command) {
 		itemInfo.cch = (int)s.tellp();
 		InsertMenuItem(menu, w, true, &itemInfo);
 	}
-	int w = TrackPopupMenu(menu, TPM_NONOTIFY | TPM_RETURNCMD, 0, 0, 0,
-		mainHwnd, nullptr) - 1;
+	int w = TrackPopupMenu(
+							menu, TPM_NONOTIFY | TPM_RETURNCMD, 0, 0, 0, mainHwnd, nullptr) -
+			1;
 	DestroyMenu(menu);
 	if (w == -1) {
 		return;

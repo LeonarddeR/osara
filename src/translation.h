@@ -8,10 +8,11 @@
 
 #pragma once
 
-#include <string>
-#include <tinygettext/dictionary.hpp>
 #include <fmt/core.h>
 #include <fmt/format.h>
+
+#include <string>
+#include <tinygettext/dictionary.hpp>
 
 extern tinygettext::Dictionary translationDict;
 
@@ -19,10 +20,12 @@ template<typename S>
 auto translate(S msg) {
 	return translationDict.translate(msg);
 }
+
 template<typename S>
 auto translate_ctxt(S context, S msg) {
 	return translationDict.translate_ctxt(context, msg);
 }
+
 template<typename S, typename N>
 auto translate_plural(S msg, S msgPlural, N num) {
 	return translationDict.translate_plural(msg, msgPlural, num);
