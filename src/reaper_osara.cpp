@@ -3030,6 +3030,7 @@ typedef struct {
 	PostCommandExecute execute;
 } PostCustomCommand;
 
+// clang-format off
 PostCommand POST_COMMANDS[] = {
 	{40001, postGoToTrack}, // Track: Insert new track
 	{6, postToggleTrackMute}, // Track: Toggle mute for selected tracks
@@ -3164,13 +3165,13 @@ PostCommand POST_COMMANDS[] = {
 	{40180, postTakeChannelMode}, // Item properties: Set take channel mode to mono (right)
 	{41130, postChangeTempo}, // Tempo: Decrease current project tempo 01 BPM
 	{41129, postChangeTempo}, // Tempo: Increase current project tempo 01 BPM
-	{41138, postChangeTempo}, // Tempo: Decrease current project tempo 0.1 BPM 
-	{41136, postChangeTempo}, // Tempo: Decrease current project tempo 10 BPM 
-	{41132, postChangeTempo}, // Tempo: Decrease current project tempo 10 percent 
-	{41134, postChangeTempo}, // Tempo: Decrease current project tempo 50 percent (half) 
-	{41137, postChangeTempo}, // Tempo: Increase current project tempo 0.1 BPM 
-	{41135, postChangeTempo}, // Tempo: Increase current project tempo 10 BPM 
-	{41131, postChangeTempo}, // Tempo: Increase current project tempo 10 percent 
+	{41138, postChangeTempo}, // Tempo: Decrease current project tempo 0.1 BPM
+	{41136, postChangeTempo}, // Tempo: Decrease current project tempo 10 BPM
+	{41132, postChangeTempo}, // Tempo: Decrease current project tempo 10 percent
+	{41134, postChangeTempo}, // Tempo: Decrease current project tempo 50 percent (half)
+	{41137, postChangeTempo}, // Tempo: Increase current project tempo 0.1 BPM
+	{41135, postChangeTempo}, // Tempo: Increase current project tempo 10 BPM
+	{41131, postChangeTempo}, // Tempo: Increase current project tempo 10 percent
 	{41133, postChangeTempo}, // Tempo: Increase current project tempo 100 percent (double)
 	{40671, postTogglePreservePitchWhenPlayRateChanged}, // Transport: Toggle preserve pitch in audio items when changing master playrate
 	{41925, postChangeItemVolume}, // Item: Nudge items volume +1dB
@@ -3366,6 +3367,7 @@ PostCustomCommand POST_CUSTOM_COMMANDS[] = {
 	{"_XENAKIOS_MOVECURRRIGHTCONFCTS", postCursorMovementScrub}, // Xenakios/SWS: Move cursor right configured pixels, creating time selection
 	{nullptr},
 };
+// clang-format on
 
 using MExplorerPostExecute = void (*)(int, HWND);
 map<int, MExplorerPostExecute> mExplorerPostCommands{
@@ -3423,6 +3425,7 @@ const char* MOVE_FROM_PLAY_CURSOR_CUSTOM_COMMANDS[] = {
 
 map<int, PostCommandExecute> midiPostCommandsMap;
 map<int, pair<PostCommandExecute, bool>> midiEventListPostCommandsMap;
+// clang-format off
 map<int, string> MIDI_POST_COMMAND_MESSAGES = {
 	{40204, _t("grid whole")}, // Grid: Set to 1
 	{40203, _t("grid half")}, // Grid: Set to 1/2
@@ -3455,6 +3458,7 @@ map<int, string> MIDI_POST_COMMAND_MESSAGES = {
 	{41712, _t("length dotted")}, // Set length for next inserted note: dotted preserving division length
 	{41713, _t("length triplet")}, // Set length for next inserted note: triplet preserving division length
 };
+// clang-format on
 
 struct ToggleCommandMessage {
 	const char* onMsg;
@@ -3464,6 +3468,7 @@ struct ToggleCommandMessage {
 // Messages for toggle actions. Specify null messages to report nothing. If a
 // toggle action isn't included here or in another of OSARA's action maps,
 // OSARA will fall back to reporting the toggle state and the action name.
+// clang-format off
 map<pair<int, int>, ToggleCommandMessage> TOGGLE_COMMAND_MESSAGES = {
 	// {{sectionId, actionId}, {onMsg, offMsg}}, // actionName
 	// Specify nullptr to report nothing for a particular message.
@@ -3506,6 +3511,7 @@ map<pair<int, int>, ToggleCommandMessage> TOGGLE_COMMAND_MESSAGES = {
 	{{MIDI_EDITOR_SECTION, 40045}, {_t("showed note names"), _t("hid note names")}}, // View: Show note names
 	{{MIDI_EDITOR_SECTION, 41295}, {_t("length matching grid"), nullptr}}, // Set length for next inserted note: grid
 };
+// clang-format on
 
 /*** Code related to context menus and other UI that isn't just actions.
  * This includes code to access REAPER context menus, but also code to display
@@ -6229,6 +6235,7 @@ void cmdChangeTransportState(int command) {
 #define DEFACCEL {0, 0, 0}
 
 // REAPER or extension commands that we want to intercept.
+// clang-format off
 Command COMMANDS[] = {
 	{MAIN_SECTION, {{0, 0, 40285}, nullptr}, nullptr, cmdGoToNextTrack}, // Track: Go to next track
 	{MAIN_SECTION, {{0, 0, 40286}, nullptr}, nullptr, cmdGoToPrevTrack}, // Track: Go to previous track
@@ -6259,8 +6266,8 @@ Command COMMANDS[] = {
 	{MAIN_SECTION, {{0, 0, 40337}, nullptr}, nullptr, cmdRemoveTracks}, // Track: Cut tracks
 	{MAIN_SECTION, {{0, 0, 40006}, nullptr}, nullptr, cmdRemoveItems}, // Item: Remove items
 	{MAIN_SECTION, {{0, 0, 40699}, nullptr}, nullptr, cmdRemoveItems}, // Edit: Cut items
-	{MAIN_SECTION, {{0, 0, 40131}, nullptr}, nullptr, cmdCropTakes}, //Take: Crop to active take in items 
-	{MAIN_SECTION, {{0, 0, 40548}, nullptr}, nullptr, cmdHealSplitsInItems}, //Item: Heal splits in items 
+	{MAIN_SECTION, {{0, 0, 40131}, nullptr}, nullptr, cmdCropTakes}, //Take: Crop to active take in items
+	{MAIN_SECTION, {{0, 0, 40548}, nullptr}, nullptr, cmdHealSplitsInItems}, //Item: Heal splits in items
 	{MAIN_SECTION, {{0, 0, 40333}, nullptr}, nullptr, cmdDeleteEnvelopePoints}, // Envelope: Delete all selected points
 	{MAIN_SECTION, {{0, 0, 40089}, nullptr}, nullptr, cmdDeleteEnvelopePoints}, // Envelope: Delete all points in time selection
 	{MAIN_SECTION, {{0, 0, 40336}, nullptr}, nullptr, cmdDeleteEnvelopePoints}, // Envelope: Cut selected points
@@ -6372,7 +6379,7 @@ Command COMMANDS[] = {
 	{MAIN_SECTION, {{0, 0, 1016}, nullptr}, nullptr, cmdChangeTransportState}, // Transport: Stop
 	{MAIN_SECTION, {{0, 0, 1013}, nullptr}, nullptr, cmdChangeTransportState}, // Transport: Record
 	{MAIN_SECTION, {{0, 0, 1007}, nullptr}, nullptr, cmdChangeTransportState}, // Transport: Play
-	{MAIN_SECTION, {DEFACCEL, nullptr}, "_XENAKIOS_TIMERTEST1", cmdChangeTransportState}, // Xenakios/SWS: Play selected items once                                                                                
+	{MAIN_SECTION, {DEFACCEL, nullptr}, "_XENAKIOS_TIMERTEST1", cmdChangeTransportState}, // Xenakios/SWS: Play selected items once
 	{MIDI_EDITOR_SECTION, {{0, 0, 40036}, nullptr}, nullptr, cmdMidiMoveCursor}, // View: Go to start of file
 	{MIDI_EVENT_LIST_SECTION, {{0, 0, 40036}, nullptr}, nullptr, cmdMidiMoveCursor}, // View: Go to start of file
 	{MIDI_EDITOR_SECTION, {{0, 0, 40037}, nullptr}, nullptr, cmdMidiMoveCursor}, // View: Go to end of file
@@ -6513,6 +6520,7 @@ Command OSARA_COMMANDS[] = {
 	{ MIDI_EVENT_LIST_SECTION, {DEFACCEL, _t("OSARA: Mute next message from OSARA")}, "OSARA_ML_MUTENEXTMESSAGE", cmdMuteNextMessage},
 	{ MEDIA_EXPLORER_SECTION, {DEFACCEL, _t("OSARA: Mute next message from OSARA")}, "OSARA_MX_MUTENEXTMESSAGE", cmdMuteNextMessage},
 };
+// clang-format on
 
 map<pair<int, int>, Command*> commandsMap;
 

@@ -1944,18 +1944,18 @@ class AudioChannelParam:  public ReaperObjParam {
 
 	MoreOptions getMoreOptions() final {
 		MoreOptions options = ReaperObjParam::getMoreOptions();
+		// Translators: An option in the context menu for the source and
+		// destination audio channel parameters in the OSARA Track Parameters
+		// dialog.
 		options.insert(options.begin(), {
 			{
-				// Translators: An option in the context menu for the source and
-				// destination audio channel parameters in the OSARA Track Parameters
-				// dialog.
 				translate("Add &2 new channels"),
 				[this] { return this->addChannels(2); }
 			},
+			// Translators: An option in the context menu for the source and
+			// destination audio channel parameters in the OSARA Track Parameters
+			// dialog.
 			{
-				// Translators: An option in the context menu for the source and
-				// destination audio channel parameters in the OSARA Track Parameters
-				// dialog.
 				translate("Add &4 new channels"),
 				[this] { return this->addChannels(4); }
 			}

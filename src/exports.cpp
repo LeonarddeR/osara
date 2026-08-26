@@ -33,24 +33,25 @@ void* _vararg_osara_getVersion(void** args, int nArgs) {
 	return nullptr;
 }
 
+static const char OUTPUT_MESSAGE_DEF[] = "void\0const char*\0message\0"
+	"Output a message to screen readers.\n"
+	"This should only be used in consultation with screen reader users. "
+	"Note that this may not work on Windows when certain GUI controls have "
+	"focus such as list boxes and trees.";
+static const char GET_VERSION_DEF[] = "void\0char*,int\0versionOut,versionOut_sz\0"
+	"Get the version of OSARA.\n"
+	"This will be in the form: year.month.day.build,commit\n"
+	"For example: 2024.3.6.1332,13560ef7";
+
 void registerExports(reaper_plugin_info_t* rec) {
 	rec->Register("API_osara_outputMessage", (void*)osara_outputMessage);
 	rec->Register("APIvararg_osara_outputMessage",
 		(void*)_vararg_osara_outputMessage);
-	rec->Register("APIdef_osara_outputMessage",
-		(void*)"void\0const char*\0message\0"
-		"Output a message to screen readers.\n"
-		"This should only be used in consultation with screen reader users. "
-		"Note that this may not work on Windows when certain GUI controls have "
-		"focus such as list boxes and trees.");
+	rec->Register("APIdef_osara_outputMessage", (void*)OUTPUT_MESSAGE_DEF);
 	rec->Register("API_osara_isShortcutHelpEnabled",
 		(void*)osara_isShortcutHelpEnabled);
 	rec->Register("API_osara_outputMessage", (void*)osara_outputMessage);
 	rec->Register("APIvararg_osara_getVersion",
 		(void*)_vararg_osara_getVersion);
-	rec->Register("APIdef_osara_getVersion",
-		(void*)"void\0char*,int\0versionOut,versionOut_sz\0"
-		"Get the version of OSARA.\n"
-		"This will be in the form: year.month.day.build,commit\n"
-		"For example: 2024.3.6.1332,13560ef7");
+	rec->Register("APIdef_osara_getVersion", (void*)GET_VERSION_DEF);
 }
