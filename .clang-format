@@ -1,104 +1,73 @@
 # OSARA: Open Source Accessibility for the REAPER Application
 # .clang-format
 # Author: James Teh <jamie@jantrid.net>
-# Copyright 2023 Leonard de Ruijter
+# Copyright 2023-2026 Leonard de Ruijter, James Teh
 # License: GNU General Public License version 2.0
 
-# Style based on Microsoft's C++ style conventions.
-BasedOnStyle: Microsoft
-# Offset for access modifiers (public, protected, private).
+# Requires clang-format 22.
+BasedOnStyle: LLVM
 AccessModifierOffset: 0
-# Align code after an open bracket with block indentation.
-AlignAfterOpenBracket: BlockIndent
-# Do not align consecutive assignments.
-AlignConsecutiveAssignments: None
-# Do not align consecutive bit fields.
-AlignConsecutiveBitFields: None
-# Do not align consecutive declarations.
-AlignConsecutiveDeclarations: None
-# Do not align consecutive macros.
-AlignConsecutiveMacros: None
-# Do not align escaped newlines.
+AlignAfterOpenBracket: false
 AlignEscapedNewlines: DontAlign
-# Do not align operands in expressions.
 AlignOperands: DontAlign
-# Do not align trailing comments.
-AlignTrailingComments: Never
-# Do not allow short blocks (e.g., if statements without braces) on a single line.
-AllowShortBlocksOnASingleLine: Never
-# Do not allow short case labels in switch statements on a single line.
-AllowShortCaseLabelsOnASingleLine: false
-# Do not allow short enums on a single line.
+AlignTrailingComments:
+  Kind: Never
 AllowShortEnumsOnASingleLine: false
-# Only allow empty functions on a single line.
 AllowShortFunctionsOnASingleLine: Empty
-# Do not allow short if statements on a single line.
-AllowShortIfStatementsOnASingleLine: Never
-# Do not allow short loops on a single line.
-AllowShortLoopsOnASingleLine: false
-# Add a space before and after the colon in bit fields.
-BitFieldColonSpacing: Both
-# Don't break before binary operators.
-BreakBeforeBinaryOperators: None
-# Keep template declaration lines together with concept.
+# COM calling-convention and SAL macros that precede a function name.
+AttributeMacros:
+  - STDMETHODCALLTYPE
+  - _In_
+  - _Out_
+  - _Outptr_
+  - _Outptr_result_maybenull_
+  - __RPC__in
+  - __RPC__out
+  - __RPC__deref_out_opt
+BinPackArguments: false
+BinPackParameters: OnePerLine
+BreakAfterOpenBracketBracedList: true
+BreakAfterOpenBracketFunction: true
+BreakAfterOpenBracketIf: true
+BreakAfterOpenBracketLoop: true
+BreakAfterOpenBracketSwitch: true
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeCloseBracketBracedList: true
+BreakBeforeCloseBracketFunction: true
+BreakBeforeCloseBracketIf: true
+BreakBeforeCloseBracketLoop: true
+BreakBeforeCloseBracketSwitch: true
 BreakBeforeConceptDeclarations: Never
-# Attach opening braces to the same line as the statement or declaration it belongs to.
-BreakBeforeBraces: Attach
-# Ternary operators will be placed after line breaks.
-BreakBeforeTernaryOperators: false
-# Don't break string literals if they are too long.
+BreakBinaryOperations: RespectPrecedence
+BreakConstructorInitializers: AfterColon
+BreakInheritanceList: AfterColon
 BreakStringLiterals: false
-# Limit lines to 80 characters long.
+BreakTemplateDeclarations: Yes
 ColumnLimit: 80
-# Indentation width for constructor initializers.
 ConstructorInitializerIndentWidth: 2
-# Indentation width for continuation lines.
 ContinuationIndentWidth: 2
-# Format braced lists as best suited for C++11 braced lists.
-Cpp11BracedListStyle: true
-# Use a fixed alignment for all pointers.
-DerivePointerAlignment: false
-# Do not indent case blocks in switch statements.
-IndentCaseBlocks: false
-# Indent case labels in switch statements.
+Cpp11BracedListStyle: FunctionCall
 IndentCaseLabels: true
-# Indent preprocessor directives before the hash.
-IndentPPDirectives: BeforeHash
-# Standard indentation width.
-IndentWidth: 2
-# Do not indent if a function definition or declaration is wrapped after the type.
-IndentWrappedFunctionNames: false
-# Insert a newline at end of file if missing.
+IndentPPDirectives: AfterHash
 InsertNewlineAtEOF: true
-# Maximum number of consecutive empty lines to keep.
-MaxEmptyLinesToKeep: 2
-# Do not indent namespaces.
-NamespaceIndentation: None
-# Penalty for indentation using spaces rather than tabs.
-PenaltyIndentedWhitespace: 1
-# Pointer alignment (Left or Right).
+KeepEmptyLines:
+  AtStartOfBlock: false
+  AtStartOfFile: false
+PackConstructorInitializers: NextLine
+PenaltyBreakAssignment: 100
+PenaltyIndentedWhitespace: 100
+PenaltyReturnTypeOnItsOwnLine: 1000
 PointerAlignment: Left
-# Separate definition blocks (Always, Never, or Leave).
+ReflowComments: Never
 SeparateDefinitionBlocks: Always
-# Use one space before trailing comments, as more spaces can be replaced by tabs somehow.
-SpacesBeforeTrailingComments: 1
-# Do not add a space after a C-style cast.
-SpaceAfterCStyleCast: false
-# Do not add a space after the template keyword.
-SpaceAfterTemplateKeyword: false
-# Sort includes (CaseSensitive, CaseInsensitive, or Never).
 SortIncludes: Never
-# C++ standard to be followed (e.g., c++98, c++11, c++14, c++17, c++20).
+SpaceAfterTemplateKeyword: false
+SpaceBeforeCtorInitializerColon: false
+SpaceBeforeInheritanceColon: false
+SpaceBeforeRangeBasedForLoopColon: false
 Standard: c++20
-# Interpreted macros as complete statements.
-StatementMacros: [
-	"BoolSetting"
-]
-# Add a space before opening parentheses in control statements.
-SpaceBeforeParens: ControlStatements
-# Do not add a space before square brackets.
-SpaceBeforeSquareBrackets: false
-# Width of a tab character.
+# Macros used as statements without a trailing semicolon.
+StatementMacros:
+  - BoolSetting
 TabWidth: 2
-# Use tabs for line continuation and indentation, and spaces for alignment. Note that we should not align.
-UseTab: Always
+UseTab: ForContinuationAndIndentation
