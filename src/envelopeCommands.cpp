@@ -556,10 +556,10 @@ void cmdhSelectEnvelope(int direction) {
 				MediaTrack* sendTrack = (MediaTrack*)GetSetTrackSendInfo(
 					track, 0, i, "P_DESTTRACK", nullptr
 				);
-				s
-					<< (int)(size_t)
-							 GetSetMediaTrackInfo(sendTrack, "IP_TRACKNUMBER", nullptr)
-					<< " ";
+				s << (int)(size_t)GetSetMediaTrackInfo(
+					sendTrack, "IP_TRACKNUMBER", nullptr
+				);
+				s << " ";
 				char* trackName = (char*)GetSetMediaTrackInfo(
 					sendTrack, "P_NAME", nullptr
 				);

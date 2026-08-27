@@ -250,11 +250,10 @@ string formatTimeMeasure(
 			if (includeZeros || wholeBeat != 0) {
 				// Translators: Used when reporting a length of time in beats.
 				// {} will be replaced with the number of beats; e.g. "2 beats".
-				s
-					<< format(
-							 translate_plural("{} beat", "{} beats", wholeBeat), wholeBeat
-						 )
-					<< " ";
+				s << format(
+					translate_plural("{} beat", "{} beats", wholeBeat), wholeBeat
+				);
+				s << " ";
 			}
 		} else {
 			// Translators: Used when reporting the beat of a time position.
@@ -1278,11 +1277,10 @@ void postGoToTrack(int command, MediaTrack* track) {
 		// the track has. {} will be replaced by the number of items; e.g.
 		// "2 items".
 		if (itemCount > 0) {
-			s
-				<< " "
-				<< format(
-						 translate_plural("{} item", "{} items", itemCount), itemCount
-					 );
+			s << " ";
+			s << format(
+				translate_plural("{} item", "{} items", itemCount), itemCount
+			);
 		}
 		if (isFreeItemPositioningEnabled(track)) {
 			s << " " << translate("free item positioning");
@@ -1349,10 +1347,10 @@ void postToggleTrackMute(int command) {
 	}
 	ostringstream s;
 	if (masterSelected) {
-		s
-			<< (isTrackMuted(GetSelectedTrack2(nullptr, 0, true))
-						 ? translate("master muted")
-						 : translate("master unmuted"));
+		auto masterState = isTrackMuted(GetSelectedTrack2(nullptr, 0, true))
+			? translate("master muted")
+			: translate("master unmuted");
+		s << masterState;
 		s << ", ";
 	}
 	for (int i = masterSelected; i < selCount; ++i) {
@@ -1411,10 +1409,10 @@ void postToggleTrackSolo(int command) {
 	}
 	ostringstream s;
 	if (masterSelected) {
-		s
-			<< (isTrackSoloed(GetSelectedTrack2(nullptr, 0, true))
-						 ? translate("master soloed")
-						 : translate("master unsoloed"));
+		auto masterState = isTrackSoloed(GetSelectedTrack2(nullptr, 0, true))
+			? translate("master soloed")
+			: translate("master unsoloed");
+		s << masterState;
 		s << ", ";
 	}
 	for (int i = masterSelected; i < selCount; ++i) {
@@ -2164,13 +2162,12 @@ void postMoveToTimeSig(int command) {
 		// Translators: Reported when moving to a time signature change. {num} will
 		// be replaced with the time signature numerator. {denom} will be replaced
 		// with the time signature denominator. For example: "time sig 6/8".
-		s
-			<< " "
-			<< format(
-					 translate("time sig {num}/{denom}"),
-					 "num"_a = sigNum,
-					 "denom"_a = sigDenom
-				 );
+		s << " ";
+		s << format(
+			translate("time sig {num}/{denom}"),
+			"num"_a = sigNum,
+			"denom"_a = sigDenom
+		);
 	}
 	s << " " << formatCursorPosition();
 	outputMessage(s);
@@ -5004,11 +5001,10 @@ void cmdHealSplitsInItems(int command) {
 	ostringstream s;
 	// Translators: Reported when splits in items are healed. {} will be replaced with the
 	// number of splits that have been successfully healed; e.g. "2 splits healed".
-	s
-		<< format(
-				 translate_plural("{} split healed", "{} splits healed", healed), healed
-			 )
-		<< ", ";
+	s << format(
+		translate_plural("{} split healed", "{} splits healed", healed), healed
+	);
+	s << ", ";
 	// Translators: This reports selected items after healing. {} will be replaced with the
 	// number of selected items; e.g. "2 items selected".
 	s << format(
@@ -5857,13 +5853,12 @@ void cmdReportCursorPosition(int command) {
 				// will be replaced with the name or number of the marker before the
 				// cursor. {after} will be replaced with the name or number of the marker
 				// after the cursor. For example: "between markers intro, verse 1".
-				s
-					<< " "
-					<< format(
-							 translate("between markers {before}, {after}"),
-							 "before"_a = beforeDisplay,
-							 "after"_a = afterDisplay
-						 );
+				s << " ";
+				s << format(
+					translate("between markers {before}, {after}"),
+					"before"_a = beforeDisplay,
+					"after"_a = afterDisplay
+				);
 				break;
 			}
 			if (!foundAfter) {

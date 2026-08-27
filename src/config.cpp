@@ -268,67 +268,66 @@ INT_PTR CALLBACK configReaperOptimal_dialogProc(
 			translateDialog(dialog);
 			ostringstream s;
 			const char nl[] = "\r\n";
-			s
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "Would you like to adjust REAPER preferences for optimal compatibility with screen readers? Choosing yes will make the following changes:"
-					 )
-				<< nl
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "1. Undock the Media Explorer so that it gets focus when opened."
-					 )
-				<< nl
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "2. Enable closing Media Explorer using the escape key."
-					 )
-				<< nl
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "3. Enable legacy file browse dialogs, so that REAPER specific options in the Open and Save As dialogs can be reached with the tab key."
-					 )
-				<< nl
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "4. Enable the space key to be used for check boxes and buttons in various windows, wherever that's more convenient than space playing the project."
-					 )
-				<< nl
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "5. Show text labels to indicate parallel, offline and bypassed in the FX list."
-					 )
-				<< nl
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "6. Use a standard, accessible edit control for the video code editor."
-					 )
-				<< nl
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "7. Hide type prefixes in the FX browser so that browsing through FX is more efficient."
-					 )
-				<< nl
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "8. Disable snap to visible grid in the MIDI Editor so movement by grid is not dependent on the horizontal zoom setting."
-					 )
-				<< nl
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "9. Make Control+Space play/stop when keyboard focus is in dialogs, needed with REAPER 7.41 or newer."
-					 )
-				<< nl
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "10. Display the file name and then the full path in the Recent Projects menu."
-					 )
-				<< nl
-				<< translate_ctxt(
-						 "optimal REAPER configuration",
-						 "Note: if now isn't a good time to tweak REAPER, you can apply these adjustments later by going to the Extensions menu in the menu bar and then the OSARA submenu."
-					 )
-				<< nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"Would you like to adjust REAPER preferences for optimal compatibility with screen readers? Choosing yes will make the following changes:"
+			);
+			s << nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"1. Undock the Media Explorer so that it gets focus when opened."
+			);
+			s << nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"2. Enable closing Media Explorer using the escape key."
+			);
+			s << nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"3. Enable legacy file browse dialogs, so that REAPER specific options in the Open and Save As dialogs can be reached with the tab key."
+			);
+			s << nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"4. Enable the space key to be used for check boxes and buttons in various windows, wherever that's more convenient than space playing the project."
+			);
+			s << nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"5. Show text labels to indicate parallel, offline and bypassed in the FX list."
+			);
+			s << nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"6. Use a standard, accessible edit control for the video code editor."
+			);
+			s << nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"7. Hide type prefixes in the FX browser so that browsing through FX is more efficient."
+			);
+			s << nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"8. Disable snap to visible grid in the MIDI Editor so movement by grid is not dependent on the horizontal zoom setting."
+			);
+			s << nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"9. Make Control+Space play/stop when keyboard focus is in dialogs, needed with REAPER 7.41 or newer."
+			);
+			s << nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"10. Display the file name and then the full path in the Recent Projects menu."
+			);
+			s << nl;
+			s << translate_ctxt(
+				"optimal REAPER configuration",
+				"Note: if now isn't a good time to tweak REAPER, you can apply these adjustments later by going to the Extensions menu in the menu bar and then the OSARA submenu."
+			);
+			s << nl;
 			HWND text = GetDlgItem(dialog, ID_CFGOPT_TEXT);
 			SetWindowText(text, s.str().c_str());
 #ifdef _WIN32

@@ -158,12 +158,11 @@ void UpdateChecker::tick() {
 			return;
 		}
 		const char SEPARATOR[] = "\r\n\r\n";
-		s
-			<< format(
-					 translate("OSARA version {} is available. Changes:"),
-					 (std::string)obj["version"]
-				 )
-			<< SEPARATOR;
+		s << format(
+			translate("OSARA version {} is available. Changes:"),
+			(std::string)obj["version"]
+		);
+		s << SEPARATOR;
 		auto pos = curVersion.find(",");
 		std::string curCommit = curVersion.substr(pos + 1);
 		auto commits = obj["commits"].as_object();

@@ -977,8 +977,9 @@ class ParamsDialog {
 		item.item.pszText = (char*)info.name.c_str();
 		item.item.cChildren = 1;
 		item.item.lParam = CATEGORY_ITEM;
-		return this->categoryTreeItems[category] =
-						 TreeView_InsertItem(this->paramTree, &item);
+		HTREEITEM treeItem = TreeView_InsertItem(this->paramTree, &item);
+		this->categoryTreeItems[category] = treeItem;
+		return treeItem;
 	}
 
 	void updateParamList() {
@@ -1466,33 +1467,33 @@ class FxParam: public Param {
 		Param::MoreOptions options;
 		double val = this->getValue();
 		if (val == this->min) {
-			options.push_back(
-				{translate("Unrestrict minimum"), [this] {
-					 this->min = this->unrestrictedMin;
-					 return Param::AfterOption::nothing;
-				 }}
-			);
+			auto unrestrictMin = [this] {
+				this->min = this->unrestrictedMin;
+				return Param::AfterOption::nothing;
+			};
+			options.push_back({translate("Unrestrict minimum"), unrestrictMin});
 		} else {
+			auto restrictMin = [this] {
+				this->min = this->getValue();
+				return Param::AfterOption::nothing;
+			};
 			options.push_back(
-				{translate("Restrict minimum to current value"), [this] {
-					 this->min = this->getValue();
-					 return Param::AfterOption::nothing;
-				 }}
+				{translate("Restrict minimum to current value"), restrictMin}
 			);
 		}
 		if (val == this->max) {
-			options.push_back(
-				{translate("Unrestrict maximum"), [this] {
-					 this->max = this->unrestrictedMax;
-					 return Param::AfterOption::nothing;
-				 }}
-			);
+			auto unrestrictMax = [this] {
+				this->max = this->unrestrictedMax;
+				return Param::AfterOption::nothing;
+			};
+			options.push_back({translate("Unrestrict maximum"), unrestrictMax});
 		} else {
+			auto restrictMax = [this] {
+				this->max = this->getValue();
+				return Param::AfterOption::nothing;
+			};
 			options.push_back(
-				{translate("Restrict maximum to current value"), [this] {
-					 this->max = this->getValue();
-					 return Param::AfterOption::nothing;
-				 }}
+				{translate("Restrict maximum to current value"), restrictMax}
 			);
 		}
 		return options;
@@ -1943,11 +1944,8 @@ class TrackSendParamProvider: public ReaperObjParamProvider {
 	Param::MoreOptions getMoreOptions() final {
 		Param::MoreOptions options;
 		if (this->getEnvelopeName()) {
-			options.push_back(
-				{translate("Show/hide &envelope"), [this] {
-					 return this->showHideEnvelope();
-				 }}
-			);
+			auto showHideEnvelope = [this] { return this->showHideEnvelope(); };
+			options.push_back({translate("Show/hide &envelope"), showHideEnvelope});
 		}
 		if (this->category == 0) {
 			options.insert(
@@ -1968,13 +1966,9 @@ class TrackSendParamProvider: public ReaperObjParamProvider {
 				}
 			);
 		} else {
+			auto remove = [this] { return this->remove(); };
 			options.insert(
-				options.end(),
-				{
-					{translate("Delete hardware output"), [this] {
-						 return this->remove();
-					 }},
-				}
+				options.end(), {{translate("Delete hardware output"), remove}}
 			);
 		}
 		return options;
@@ -2164,19 +2158,18 @@ class AudioChannelParam: public ReaperObjParam {
 
 	MoreOptions getMoreOptions() final {
 		MoreOptions options = ReaperObjParam::getMoreOptions();
+		auto addTwo = [this] { return this->addChannels(2); };
+		auto addFour = [this] { return this->addChannels(4); };
 		// Translators: An option in the context menu for the source and
 		// destination audio channel parameters in the OSARA Track Parameters
 		// dialog.
 		options.insert(
 			options.begin(),
-			{{translate("Add &2 new channels"),
-				 [this] { return this->addChannels(2); }},
+			{{translate("Add &2 new channels"), addTwo},
 				// Translators: An option in the context menu for the source and
 				// destination audio channel parameters in the OSARA Track Parameters
 				// dialog.
-				{translate("Add &4 new channels"), [this] {
-					 return this->addChannels(4);
-				 }}}
+				{translate("Add &4 new channels"), addFour}}
 		);
 		return options;
 	}
